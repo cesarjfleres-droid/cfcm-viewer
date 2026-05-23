@@ -1,0 +1,320 @@
+/* ---------- Reset / shell ---------- */
+*,*::before,*::after { box-sizing: border-box; }
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #000;
+    color: #fff;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    user-select: none;
+    font-family: ui-serif, "New York", "Iowan Old Style", Georgia, "Times New Roman", serif;
+    font-weight: 300;
+    letter-spacing: 0.01em;
+}
+
+button, a { font-family: inherit; color: inherit; }
+
+/* ---------- Layers (z-stack bottom to top) ---------- */
+
+/* Camera video — fills viewport, behind everything */
+#camera {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 1;
+    background: #000;
+}
+
+/* Fallback gradient when no camera */
+#fallback-bg {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    background:
+        radial-gradient(ellipse at 50% 30%, #2a1f17 0%, #120a06 55%, #050302 100%);
+}
+#fallback-bg::after {
+    content: "";
+    position: absolute; inset: 0;
+    background:
+        radial-gradient(circle at 50% 70%, rgba(255,180,120,0.08) 0%, transparent 60%);
+}
+
+/* Fake shadow under dish */
+#shadow {
+    position: fixed;
+    left: 50%;
+    top: 68%;
+    width: 70vmin;
+    height: 22vmin;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+    pointer-events: none;
+    background: radial-gradient(
+        ellipse at center,
+        rgba(0,0,0,0.60) 0%,
+        rgba(0,0,0,0.32) 35%,
+        rgba(0,0,0,0.10) 65%,
+        rgba(0,0,0,0) 100%
+    );
+    filter: blur(10px);
+    animation: shadow-float 4.2s ease-in-out infinite;
+}
+
+@keyframes shadow-float {
+    0%,100% { transform: translate(-50%, -50%) scale(1, 1); opacity: 0.92; }
+    50%     { transform: translate(-50%, -48%) scale(1.05, 0.92); opacity: 0.78; }
+}
+
+/* WebGL canvas — splat layer */
+#canvas {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 3;
+    touch-action: none;
+    display: block;
+    animation: dish-float 5s ease-in-out infinite;
+    will-change: transform;
+}
+
+@keyframes dish-float {
+    0%,100% { transform: translateY(0); }
+    50%     { transform: translateY(-6px); }
+}
+
+/* ---------- Buttons ---------- */
+.primary {
+    appearance: none;
+    border: none;
+    background: rgba(255,255,255,0.95);
+    color: #111;
+    padding: 14px 36px;
+    font-size: 14px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    font-weight: 500;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: transform 150ms ease, background 200ms ease;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+}
+.primary:active { transform: scale(0.97); background: #fff; }
+
+.ghost {
+    appearance: none;
+    border: 1px solid rgba(255,255,255,0.18);
+    background: rgba(0,0,0,0.35);
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    color: #fff;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    transition: transform 150ms ease, background 200ms ease;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 13px;
+    text-decoration: none;
+}
+.ghost:disabled { opacity: 0.35; }
+.ghost:active { transform: scale(0.94); }
+
+/* ---------- Loading ---------- */
+#loading {
+    position: fixed;
+    inset: 0;
+    z-index: 15;
+    display: grid;
+    grid-auto-flow: row;
+    place-items: center;
+    gap: 18px;
+    background: rgba(0,0,0,0.55);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: opacity 400ms ease, visibility 400ms ease;
+}
+#loading.hide { opacity: 0; visibility: hidden; pointer-events: none; }
+#loading-label {
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 12px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.75);
+}
+
+.ring {
+    width: 36px;
+    height: 36px;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-top-color: rgba(255,255,255,0.85);
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------- Status pill ---------- */
+#status-pill {
+    position: fixed;
+    top: max(18px, env(safe-area-inset-top));
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    background: rgba(0,0,0,0.45);
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 999px;
+    padding: 7px 14px 7px 12px;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.85);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#status-pill .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #d94545;
+    box-shadow: 0 0 8px rgba(217,69,69,0.8);
+    animation: pulse 1.6s ease-in-out infinite;
+}
+@keyframes pulse {
+    0%,100% { opacity: 1; }
+    50%     { opacity: 0.4; }
+}
+
+/* ---------- Bottom control bar ---------- */
+#controls {
+    position: fixed;
+    bottom: max(28px, env(safe-area-inset-bottom));
+    left: 0;
+    right: 0;
+    z-index: 10;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 28px;
+    padding: 0 24px;
+}
+
+#capture-btn {
+    appearance: none;
+    border: none;
+    background: transparent;
+    width: 76px;
+    height: 76px;
+    border-radius: 50%;
+    position: relative;
+    cursor: pointer;
+    padding: 0;
+    transition: transform 100ms ease;
+}
+#capture-btn .capture-ring {
+    position: absolute;
+    inset: 0;
+    border: 2px solid rgba(255,255,255,0.95);
+    border-radius: 50%;
+}
+#capture-btn .capture-core {
+    position: absolute;
+    inset: 6px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 120ms ease, background 200ms ease, border-radius 200ms ease;
+}
+#capture-btn:active .capture-core { transform: scale(0.85); }
+#capture-btn.recording .capture-core {
+    background: #d94545;
+    border-radius: 8px;
+    inset: 18px;
+}
+
+/* ---------- Preview overlay ---------- */
+#preview {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
+}
+
+.preview-inner {
+    width: 100%;
+    max-width: 480px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+}
+
+#preview img, #preview video {
+    width: 100%;
+    max-height: 70vh;
+    object-fit: contain;
+    border-radius: 14px;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+}
+
+.preview-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    width: 100%;
+}
+.preview-actions .ghost {
+    width: auto;
+    height: 44px;
+    border-radius: 999px;
+    padding: 0 22px;
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+}
+
+/* ---------- Toast ---------- */
+#toast {
+    position: fixed;
+    bottom: max(120px, calc(env(safe-area-inset-bottom) + 110px));
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 40;
+    background: rgba(0,0,0,0.78);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 999px;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    border: 1px solid rgba(255,255,255,0.08);
+    max-width: 80vw;
+    text-align: center;
+}
+
+/* ---------- Reduced-motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+    #canvas, #shadow { animation: none; }
+}
