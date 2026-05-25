@@ -1,6 +1,6 @@
 /* Food3D · mobile camera-overlay viewer
  * Vanilla JS + PlayCanvas. No tracking — pseudo-AR illusion.
- * v2 : ajout flip caméra (selfie / arrière) + capture mirror-aware
+ * v3 : contrôles séparés horizontal/vertical + amplitude tilt élargie + debug log
  */
 (async function main() {
   const $ = (id) => document.getElementById(id);
@@ -25,7 +25,6 @@
   let currentFacingMode = 'environment';
 
   async function startCamera(facingMode) {
-    // Couper proprement le stream précédent
     if (stream) {
       stream.getTracks().forEach(t => t.stop());
       stream = null;
@@ -42,7 +41,6 @@
     video.srcObject = stream;
     await video.play();
     currentFacingMode = facingMode;
-    // Mirror visuel uniquement en mode selfie (convention iOS/Android)
     video.classList.toggle('mirrored', facingMode === 'user');
   }
 
@@ -186,6 +184,17 @@
   await new Promise((r) => requestAnimationFrame(r));
   setProgress(98);
 
+  // ============================================================
+  //   ⚙️  CONTRÔLES INTERACTION — RÉGLAGES PRINCIPAUX
+  // ============================================================
+  const ROT_SPEED_H = 0.4;    // Vitesse rotation horizontale (gauche/droite) — par défaut: 0.4
+  const ROT_SPEED_V = 0.6;    // Vitesse rotation verticale (haut/bas) — AUGMENTÉ pour plus de sensibilité
+  const SMOOTH      = 0.22;   // Lissage du mouvement (0 = instantané, 1 = pas de mouvement)
+  const FRICTION    = 0.95;   // Friction inertie (0.95 = inertie douce)
+  const MAX_TILT_UP   = 28;   // Inclinaison MAX vers le haut (voir le dessus de la tarte) en degrés
+  const MAX_TILT_DOWN = 28;   // Inclinaison MAX vers le bas (voir le dessous) en degrés
+  // ============================================================
+
   // ---------- 5. INTERACTION ----------
   let isDragging = false;
   let activePointerId = null;
@@ -195,10 +204,9 @@
   let rotY = 0, rotX = 0;
   let userInteracted = false;
 
-  const ROT_SPEED = 0.4;
-  const SMOOTH    = 0.22;
-  const FRICTION  = 0.95;
-  const MAX_TILT  = 200;
+  function clampTilt(angle) {
+    return Math.max(-MAX_TILT_DOWN, Math.min(MAX_TILT_UP, angle));
+  }
 
   function onDown(e) {
     if (activePointerId !== null) return;
@@ -219,10 +227,10 @@
     const dy = e.clientY - lastY;
     lastX = e.clientX;
     lastY = e.clientY;
-    velY = dx * ROT_SPEED;
-    velX = dy * ROT_SPEED;
+    velY = dx * ROT_SPEED_H;          // rotation horizontale
+    velX = dy * ROT_SPEED_V;          // rotation verticale (plus rapide)
     targetRotY += velY;
-    targetRotX = Math.max(-MAX_TILT, Math.min(MAX_TILT, targetRotX + velX));
+    targetRotX = clampTilt(targetRotX + velX);
   }
   function onUp(e) {
     if (e.pointerId !== activePointerId) return;
@@ -243,7 +251,7 @@
 
     if (userInteracted && !isDragging) {
       targetRotY += velY;
-      targetRotX = Math.max(-MAX_TILT, Math.min(MAX_TILT, targetRotX + velX));
+      targetRotX = clampTilt(targetRotX + velX);
       velY *= FRICTION;
       velX *= FRICTION;
       if (Math.abs(velY) < 0.01) velY = 0;
@@ -264,6 +272,24 @@
   setProgress(100);
   setTimeout(() => hint.classList.add('faded'), 4000);
 
+  // ---------- DEBUG : Affichage temps réel dans la console ----------
+  // Active le mode debug en tapant la touche "D" sur clavier (PC) ou en ajoutant ?debug=1 à l'URL
+  const DEBUG = new URLSearchParams(location.search).has('debug');
+  if (DEBUG) {
+    const debugEl = document.createElement('div');
+    debugEl.style.cssText = 'position:fixed;top:10px;left:10px;z-index:99999;background:rgba(0,0,0,0.7);color:#0f0;font:12px monospace;padding:8px;border-radius:6px;pointer-events:none;';
+    document.body.appendChild(debugEl);
+    setInterval(() => {
+      debugEl.innerHTML = `
+        TILT  X: ${rotX.toFixed(1)}° / ±${MAX_TILT_UP}°<br>
+        ROT   Y: ${(rotY % 360).toFixed(1)}°<br>
+        TARGET X: ${targetRotX.toFixed(1)}°<br>
+        SPEED V: ${ROT_SPEED_V} / H: ${ROT_SPEED_H}
+      `;
+    }, 100);
+    console.log('[Food3D] DEBUG mode active — params:', { ROT_SPEED_H, ROT_SPEED_V, MAX_TILT_UP, MAX_TILT_DOWN });
+  }
+
   // ---------- 7. RESIZE ----------
   const handleResize = () => { app.resizeCanvas(); };
   window.addEventListener('resize', handleResize);
@@ -280,7 +306,6 @@
       await startCamera(next);
     } catch (err) {
       console.error('[Food3D] Flip camera failed:', err);
-      // Tentative de fallback : reprendre l'ancienne caméra
       try { await startCamera(currentFacingMode); } catch (_) {}
     } finally {
       setTimeout(() => {
@@ -295,7 +320,6 @@
     flash.classList.add('flash');
     setTimeout(() => flash.classList.remove('flash'), 120);
 
-    // Forcer un frame WebGL frais avant lecture
     app.render();
 
     const W = window.innerWidth  * dpr;
@@ -304,7 +328,6 @@
     out.width = W; out.height = H;
     const ctx = out.getContext('2d');
 
-    // 1) Vidéo (mode object-fit: cover) + mirror si selfie
     const vw = video.videoWidth, vh = video.videoHeight;
     if (vw && vh) {
       const screenAR = W / H;
@@ -319,7 +342,6 @@
       }
 
       if (currentFacingMode === 'user') {
-        // Match visual mirror : flip horizontal sur le rendu final
         ctx.save();
         ctx.translate(W, 0);
         ctx.scale(-1, 1);
@@ -333,7 +355,6 @@
       ctx.fillRect(0, 0, W, H);
     }
 
-    // 2) Fake ombre
     const cx = W / 2;
     const cy = H * 0.62;
     const rx = W * 0.21;
@@ -351,7 +372,6 @@
     ctx.fill();
     ctx.restore();
 
-    // 3) Splat (canvas WebGL transparent)
     ctx.drawImage(canvas, 0, 0, W, H);
 
     out.toBlob((blob) => {
@@ -384,7 +404,6 @@
     try { app.destroy(); } catch (e) {}
   });
 
-  // Hide loader
   setTimeout(() => {
     loader.classList.add('hidden');
     setTimeout(() => loader.style.display = 'none', 700);
