@@ -1,47 +1,68 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-<meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="theme-color" content="#000000" />
-<title>Food3D</title>
-<link rel="preload" href="fraise.ply" as="fetch" crossorigin="anonymous" />
-<link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>Food3D · Tarte aux Fraises</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/playcanvas@2.3.4/build/playcanvas.min.js"></script>
 </head>
 <body>
 
-<video id="camera-feed" autoplay playsinline muted webkit-playsinline></video>
+  <!-- Layer 1 : flux caméra -->
+  <video id="camera-feed" autoplay muted playsinline webkit-playsinline></video>
 
-<div id="shadow"></div>
+  <!-- Layer 2 : ombre fake au sol -->
+  <div id="shadow"></div>
 
-<canvas id="viewer-3d"></canvas>
+  <!-- Layer 3 : canvas 3D (gaussian splat) -->
+  <canvas id="viewer-3d"></canvas>
 
-<div id="capture-flash"></div>
+  <!-- Layer 4 : UI -->
+  <div id="hint">Glissez pour explorer</div>
 
-<div id="ui">
-  <div id="hint">Glissez pour tourner le plat</div>
-  <button id="capture-btn" aria-label="Capturer">
-    <span class="ring"></span>
-    <span class="dot"></span>
-  </button>
-</div>
+  <div id="ui-controls">
+    <button id="flip-btn" aria-label="Changer de caméra" title="Selfie / Arrière">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 7v6a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7"/>
+        <path d="M7 7V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/>
+        <path d="M8 11l-2 2 2 2"/>
+        <path d="M16 11l2 2-2 2"/>
+        <path d="M6 13h12"/>
+      </svg>
+    </button>
 
-<div id="loader">
-  <div class="loader-title">FOOD3D</div>
-  <div class="loader-bar"><div class="loader-bar-fill" id="loader-fill"></div></div>
-  <div class="loader-percent" id="loader-percent">0%</div>
-</div>
+    <button id="capture-btn" aria-label="Prendre une photo">
+      <span class="capture-ring"></span>
+      <span class="capture-dot"></span>
+    </button>
 
-<div id="camera-denied">
-  <h2>Caméra requise</h2>
-  <p>Pour visualiser le plat dans votre environnement, autorisez l'accès à la caméra dans les réglages de votre navigateur.</p>
-  <button onclick="location.reload()">Réessayer</button>
-</div>
+    <div class="placeholder" aria-hidden="true"></div>
+  </div>
 
-<script src="https://cdn.jsdelivr.net/npm/playcanvas@2.10.0/build/playcanvas.min.js"></script>
-<script src="viewer.js"></script>
+  <!-- Flash blanc lors du shutter -->
+  <div id="capture-flash"></div>
 
+  <!-- Loader -->
+  <div id="loader">
+    <div class="logo">FOOD<span>3D</span></div>
+    <div class="loader-bar"><div id="loader-fill"></div></div>
+    <div id="loader-percent">0%</div>
+    <div class="loader-hint">Chargement du modèle 3D</div>
+  </div>
+
+  <!-- Caméra refusée -->
+  <div id="camera-denied">
+    <div class="denied-box">
+      <h2>Caméra requise</h2>
+      <p>Autorisez l'accès à la caméra dans les réglages de votre navigateur pour visualiser le plat en réalité augmentée.</p>
+    </div>
+  </div>
+
+  <script src="viewer.js"></script>
 </body>
 </html>
