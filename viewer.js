@@ -107,7 +107,7 @@
   const SPLAT_SCALE = 3000;
   const SPLAT_EULER_X = -90, SPLAT_EULER_Y = 0, SPLAT_EULER_Z = 180;
   const SPLAT_TRIM_X  = 12,  SPLAT_TRIM_Y  = 0, SPLAT_TRIM_Z  = 0;
-  const SPLAT_LIFT_Y  = 2500;
+  const SPLAT_LIFT_Y  = 0;
   const FOV_Y         = 50;
   // ============================================================
 
