@@ -94,14 +94,19 @@
   const SPLAT_POS_Z   = 0;
   const CAM_POS_X     = 0;
   const CAM_POS_Y     = 0;
-  const CAM_POS_Z     = 30;
+  // Camera distance: was 30 with the OLD off-centre setup, where the tart's
+  // centroid happened to land ~5100 units away from the camera after rotation
+  // & scale. Now that we explicitly centre the tart at world origin, we need
+  // to put the camera at that same ~5100-unit distance to preserve the
+  // apparent on-screen size. Tweak this single number to zoom in/out.
+  const CAM_POS_Z     = 5800;
 
-  const SPLAT_SCALE   = 280000;
+  const SPLAT_SCALE   = 3000;
 
   // Orientation: base axis-swap + fine trim.
   const SPLAT_EULER_X = -90;
   const SPLAT_EULER_Y = 0;
-  const SPLAT_EULER_Z = 0;
+  const SPLAT_EULER_Z = 180;
   const SPLAT_TRIM_X  = 12;
   const SPLAT_TRIM_Y  = 0;
   const SPLAT_TRIM_Z  = 0;
@@ -159,7 +164,39 @@
     SPLAT_EULER_Y + SPLAT_TRIM_Y,
     SPLAT_EULER_Z + SPLAT_TRIM_Z
   );
-  splatEntity.setLocalPosition(0, SPLAT_LIFT_Y, 0);
+
+  // ---------- AUTO-CENTRE the tart on the visible core ----------
+  // The .ply contains thousands of "floater" splats from the gaussian
+  // reconstruction, scattered up to ±24 units away from the actual cake.
+  // PlayCanvas's runtime AABB includes them, so its centre is way off
+  // (around (10.9, -5.1, -5.0) in local space) — using it shifts the
+  // tart tens of thousands of world units off-screen.
+  //
+  // Instead, we hardcode the centre of the OPAQUE (visible) splats only,
+  // computed offline from fraise.ply (opacity sigmoid >= 0.5):
+  //   X: [-0.24, 0.57]   centre = 0.165
+  //   Y: [ 0.39, 0.86]   centre = 0.623
+  //   Z: [-1.91, -1.23]  centre = -1.573
+  // This is the geometric centre of the cake in splat-local space.
+  //
+  // We translate by -R*S*centre so that point lands at world (0,0,0)
+  // — i.e. exactly where the camera looks. Scale and orientation untouched.
+  const TART_LOCAL_CENTRE = new pc.Vec3(0.165, 0.623, -1.573);
+  const _scaled = new pc.Vec3(
+    TART_LOCAL_CENTRE.x * SPLAT_SCALE,
+    TART_LOCAL_CENTRE.y * SPLAT_SCALE,
+    TART_LOCAL_CENTRE.z * SPLAT_SCALE
+  );
+  const _rot = new pc.Quat();
+  _rot.setFromEulerAngles(
+    SPLAT_EULER_X + SPLAT_TRIM_X,
+    SPLAT_EULER_Y + SPLAT_TRIM_Y,
+    SPLAT_EULER_Z + SPLAT_TRIM_Z
+  );
+  const _rotated = new pc.Vec3();
+  _rot.transformVector(_scaled, _rotated);
+  // Negate to centre, then re-apply SPLAT_LIFT_Y as a fine vertical tweak.
+  splatEntity.setLocalPosition(-_rotated.x, -_rotated.y + SPLAT_LIFT_Y, -_rotated.z);
 
   app.start();
   // Two settle frames so the splat is rendered at its final position before the loader fades.
@@ -179,7 +216,13 @@
   const ROT_SPEED = 0.6;        // deg per px — slightly faster for thumb-scale drags
   const SMOOTH    = 0.25;       // higher = snappier
   const FRICTION  = 0.94;       // closer to 1 = longer glide
-  const MAX_TILT  = 80;         // ± vertical tilt limit
+  // Tilt limit: the gaussian-splat was trained mainly from above, so steep
+  // angles reveal floaters, holes and unmodelled sides of the tart. Keep the
+  // user inside the "well-reconstructed" cone — 40° lets the pastry crust be
+  // visible from a comfortable 3/4 angle but stays short of the back-side
+  // artefact zone (which starts around 50°+). PlayCanvas's gsplat pass
+  // can't be depth-occluded by meshes, so this tilt cap is the artefact fix.
+  const MAX_TILT  = 40;
 
   function onDown(e) {
     if (activePointerId !== null) return;          // ignore second finger
@@ -236,7 +279,13 @@
     rotX += (targetRotX - rotX) * SMOOTH;
 
     // Pivot lives in camera-local space — use setLocalEulerAngles so rotation is correct.
-    pivot.setLocalEulerAngles(rotX, rotY, 0);
+    // NOTE: horizontal swipes use the Z-axis (3rd arg), NOT the Y-axis. Reason:
+    // after the base rotation (-78, 0, 180), the tart's own vertical axis
+    // (top-of-cake → bottom-of-cake) lines up with world Z, not world Y. If we
+    // spun around world Y, horizontal swipes would TIP the tart on its side and
+    // reveal the unmodelled underside. Spinning around world Z makes the tart
+    // rotate cleanly on its base, top-of-cake stays facing the camera.
+    pivot.setLocalEulerAngles(rotX, 0, rotY);
 
     // CSS shadow: gentle breathing in sync with float
     const s = 1 + Math.sin(t * 1.2) * 0.04;
