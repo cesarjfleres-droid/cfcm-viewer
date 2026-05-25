@@ -104,10 +104,10 @@
   // ============================================================
   const SPLAT_POS_X = 0, SPLAT_POS_Y = 0, SPLAT_POS_Z = 0;
   const CAM_POS_X   = 0, CAM_POS_Y   = 0, CAM_POS_Z   = 5800;
-  const SPLAT_SCALE = 2000;
+  const SPLAT_SCALE = 2400;
   const SPLAT_EULER_X = -90, SPLAT_EULER_Y = 0, SPLAT_EULER_Z = 180;
   const SPLAT_TRIM_X  = 12,  SPLAT_TRIM_Y  = 0, SPLAT_TRIM_Z  = 0;
-  const SPLAT_LIFT_Y  = -600;
+  const SPLAT_LIFT_Y  = 400;
   const FOV_Y         = 50;
   // ============================================================
 
@@ -165,7 +165,7 @@
   );
 
   // ---------- Centrage opaque (offline-computed) ----------
-  const TART_LOCAL_CENTRE = new pc.Vec3(0.165, 0.623, -1.573);
+  const TART_LOCAL_CENTRE = new pc.Vec3(0.1644, 0.5843, -1.5571);
   const _scaled = new pc.Vec3(
     TART_LOCAL_CENTRE.x * SPLAT_SCALE,
     TART_LOCAL_CENTRE.y * SPLAT_SCALE,
@@ -195,10 +195,10 @@
   let rotY = 0, rotX = 0;
   let userInteracted = false;
 
-  const ROT_SPEED = 0.6;
-  const SMOOTH    = 0.25;
-  const FRICTION  = 0.94;
-  const MAX_TILT  = 15;
+  const ROT_SPEED = 0.4;
+  const SMOOTH    = 0.22;
+  const FRICTION  = 0.95;
+  const MAX_TILT  = 8;
 
   function onDown(e) {
     if (activePointerId !== null) return;
