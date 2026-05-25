@@ -198,7 +198,7 @@
   const ROT_SPEED = 0.4;
   const SMOOTH    = 0.22;
   const FRICTION  = 0.95;
-  const MAX_TILT  = 60;
+  const MAX_TILT  = 200;
 
   function onDown(e) {
     if (activePointerId !== null) return;
