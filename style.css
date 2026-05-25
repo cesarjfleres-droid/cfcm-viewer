@@ -1,5 +1,5 @@
 /* ============================================================
-   CF&CM · Le Bistrot Gourmand
+   CF&CM · La Maison Auberge
    Tone : Refined French luxury — Loro Piana / Hermès / Apple
    Typography : Cormorant Garamond (display) + Hanken Grotesk (UI)
    Palette : warm cream, charcoal, deep navy CF&CM
@@ -24,7 +24,7 @@
   --shadow-md:    0 4px 12px rgba(20, 23, 29, 0.06), 0 12px 32px rgba(20, 23, 29, 0.05);
   --shadow-lg:    0 12px 36px rgba(20, 23, 29, 0.10), 0 24px 64px rgba(20, 23, 29, 0.06);
 
-  /* Tint families (placeholders) */
+  /* Tint families */
   --tint-sweet-a:        #f5e3e1;
   --tint-sweet-b:        #efd1c8;
   --tint-savory-warm-a:  #f0e3cf;
@@ -63,7 +63,6 @@ body {
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
 
-  /* Subtle paper texture — barely perceptible warm noise */
   background-image:
     radial-gradient(ellipse 80% 50% at 50% 0%, rgba(176, 135, 70, 0.05), transparent 60%),
     radial-gradient(ellipse 60% 60% at 0% 100%, rgba(29, 53, 87, 0.025), transparent 60%);
@@ -197,6 +196,57 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 }
 
 /* ============================================================
+   MENU SECTIONS
+   ============================================================ */
+.menu-section {
+  padding-top: clamp(32px, 5vw, 64px);
+  padding-bottom: clamp(16px, 3vw, 32px);
+}
+
+.section-header {
+  text-align: center;
+  padding: 0 var(--gutter);
+  margin-bottom: clamp(32px, 5vw, 56px);
+  max-width: var(--container-max);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.section-number {
+  display: inline-block;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 16px;
+  color: var(--gold);
+  letter-spacing: 0.1em;
+  margin-bottom: 12px;
+}
+
+.section-title {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(32px, 5vw, 48px);
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  position: relative;
+  display: inline-block;
+  padding-bottom: 16px;
+}
+
+.section-title::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 1px;
+  background: var(--gold);
+  opacity: 0.6;
+}
+
+/* ============================================================
    MENU GRID
    ============================================================ */
 .menu-grid {
@@ -205,7 +255,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   gap: clamp(20px, 2.4vw, 32px);
   max-width: var(--container-max);
   margin: 0 auto;
-  padding: 0 var(--gutter) clamp(64px, 8vw, 120px);
+  padding: 0 var(--gutter);
 }
 
 @media (min-width: 640px)  { .menu-grid { grid-template-columns: repeat(2, 1fr); } }
@@ -315,19 +365,6 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .dish-card[data-family="seafood"]      .dish-image-placeholder { --tint-a: var(--tint-seafood-a);     --tint-b: var(--tint-seafood-b); }
 .dish-card[data-family="fresh"]        .dish-image-placeholder { --tint-a: var(--tint-fresh-a);       --tint-b: var(--tint-fresh-b); }
 
-.dish-image {
-  position: absolute; inset: 0;
-  width: 100%; height: 100%;
-  object-fit: cover;
-  opacity: 0;
-  z-index: 2;
-  transition: opacity 0.7s ease, transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.dish-image-wrap.img-loaded .dish-image { opacity: 1; }
-.dish-image-wrap.img-loaded .dish-image-placeholder { opacity: 0; }
-
-.dish-card:hover .dish-image { transform: scale(1.04); }
-
 /* ----- Body ----- */
 .dish-body {
   padding: 22px 22px 22px;
@@ -421,7 +458,6 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   box-shadow: 0 2px 6px rgba(29, 53, 87, 0.2);
 }
 
-/* Subtle shimmer on hover */
 .dish-cta--active::before {
   content: '';
   position: absolute;
@@ -450,6 +486,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   padding: clamp(40px, 6vw, 64px) var(--gutter);
   text-align: center;
   background: var(--cream-warm);
+  margin-top: clamp(48px, 8vw, 96px);
 }
 .footer-mark {
   font-family: var(--font-display);
@@ -458,6 +495,11 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   color: var(--navy);
   letter-spacing: 0.04em;
   margin-bottom: 16px;
+}
+.footer-mark .brand-amp {
+  font-style: italic;
+  font-weight: 300;
+  color: var(--gold);
 }
 .site-footer p {
   font-size: 12.5px;
@@ -491,13 +533,12 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 @media (hover: none) {
   .dish-card:hover { transform: none; box-shadow: var(--shadow-sm); }
   .dish-card--featured:hover { box-shadow: var(--shadow-md), 0 0 0 1px rgba(29, 53, 87, 0.04); }
-  .dish-card:hover .dish-image { transform: none; }
   .dish-cta--active:hover { transform: none; }
   .dish-cta--active:hover svg:last-child { transform: none; }
 }
 
 /* ============================================================
-   PRINT (just in case — restaurant might print preview)
+   PRINT
    ============================================================ */
 @media print {
   body { background: #fff; }
