@@ -112,7 +112,7 @@
   const SPLAT_TRIM_Z  = 0;
 
   // Vertical screen position. Negative = slightly below centre (table-top feel).
-  const SPLAT_LIFT_Y  = 800;
+  const SPLAT_LIFT_Y  = 2500;
 
   const FOV_Y         = 50;
   // ============================================================
