@@ -104,10 +104,10 @@
   // ============================================================
   const SPLAT_POS_X = 0, SPLAT_POS_Y = 0, SPLAT_POS_Z = 0;
   const CAM_POS_X   = 0, CAM_POS_Y   = 0, CAM_POS_Z   = 5800;
-  const SPLAT_SCALE = 3000;
+  const SPLAT_SCALE = 2000;
   const SPLAT_EULER_X = -90, SPLAT_EULER_Y = 0, SPLAT_EULER_Z = 180;
   const SPLAT_TRIM_X  = 12,  SPLAT_TRIM_Y  = 0, SPLAT_TRIM_Z  = 0;
-  const SPLAT_LIFT_Y  = 0;
+  const SPLAT_LIFT_Y  = -600;
   const FOV_Y         = 50;
   // ============================================================
 
@@ -198,7 +198,7 @@
   const ROT_SPEED = 0.6;
   const SMOOTH    = 0.25;
   const FRICTION  = 0.94;
-  const MAX_TILT  = 40;
+  const MAX_TILT  = 15;
 
   function onDown(e) {
     if (activePointerId !== null) return;
