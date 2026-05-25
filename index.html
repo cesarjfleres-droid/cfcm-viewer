@@ -6,12 +6,13 @@
 <meta name="theme-color" content="#000000">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Food3D · Tarte aux Fraises</title>
+<title>CF&amp;CM · Tarte aux Fraises en 3D</title>
 <style>
 :root {
   --gold: #d4af37;
   --gold-soft: #e8c870;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
 }
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 html, body {
@@ -29,18 +30,19 @@ html, body {
   object-fit: cover;
   z-index: 1;
   background: #000;
+  transition: transform 0.3s ease;
 }
 #camera-feed.mirrored { transform: scaleX(-1); }
 
 #shadow {
   position: fixed;
-  left: 50%; top: 62%;
+  left: 50%; top: 58%;
   transform: translate(-50%, -50%);
-  width: 42vw; height: 8vw;
-  max-width: 280px; max-height: 50px;
+  width: 38vw; height: 7vw;
+  max-width: 260px; max-height: 46px;
   background: radial-gradient(ellipse,
-    rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.30) 35%, rgba(0,0,0,0) 70%);
-  filter: blur(8px);
+    rgba(0,0,0,0.50) 0%, rgba(0,0,0,0.25) 35%, rgba(0,0,0,0) 70%);
+  filter: blur(10px);
   z-index: 2;
   pointer-events: none;
 }
@@ -54,12 +56,33 @@ html, body {
   background: transparent;
 }
 
+/* Back arrow → return to menu */
+#back-btn {
+  position: fixed;
+  top: calc(16px + var(--safe-top));
+  left: 16px;
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  background: rgba(20,20,20,0.55);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.18);
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  z-index: 25;
+  text-decoration: none;
+  transition: transform 0.2s, background 0.2s;
+}
+#back-btn:active { transform: scale(0.9); background: rgba(255,255,255,0.18); }
+#back-btn svg { width: 20px; height: 20px; }
+
 #hint {
   position: fixed;
   left: 50%;
   bottom: calc(140px + var(--safe-bottom));
   transform: translateX(-50%);
-  font-size: 12px; letter-spacing: 2px;
+  font-size: 11px; letter-spacing: 3px;
   text-transform: uppercase;
   color: rgba(255,255,255,0.85);
   background: rgba(0,0,0,0.40);
@@ -102,7 +125,7 @@ html, body {
   cursor: pointer;
   transition: transform 0.25s, background 0.2s;
 }
-#flip-btn svg { width: 24px; height: 24px; }
+#flip-btn svg { width: 22px; height: 22px; }
 #flip-btn:active { transform: scale(0.88); background: rgba(255,255,255,0.18); }
 #flip-btn.flipping svg { animation: flip-spin 0.5s ease; }
 @keyframes flip-spin {
@@ -111,7 +134,7 @@ html, body {
 }
 
 #capture-btn {
-  width: 76px; height: 76px;
+  width: 72px; height: 72px;
   border-radius: 50%;
   background: transparent; border: none;
   position: relative;
@@ -125,7 +148,7 @@ html, body {
   transition: transform 0.15s;
 }
 .capture-dot {
-  width: 60px; height: 60px;
+  width: 58px; height: 58px;
   border-radius: 50%;
   background: #fff;
   transition: transform 0.15s, background 0.15s;
@@ -154,9 +177,10 @@ html, body {
 }
 #loader.hidden { opacity: 0; pointer-events: none; }
 #loader .logo {
-  font-size: 38px; letter-spacing: 7px; font-weight: 200;
+  font-size: 32px; letter-spacing: 6px; font-weight: 200;
+  font-family: 'Cormorant Garamond', Georgia, serif;
 }
-#loader .logo span { color: var(--gold); font-weight: 600; }
+#loader .logo span { color: var(--gold); font-weight: 500; }
 .loader-bar {
   width: 220px; height: 2px;
   background: rgba(255,255,255,0.12);
@@ -173,7 +197,7 @@ html, body {
   color: rgba(255,255,255,0.45); font-weight: 300;
 }
 .loader-hint {
-  font-size: 11px; letter-spacing: 2px;
+  font-size: 10px; letter-spacing: 2px;
   text-transform: uppercase;
   color: rgba(255,255,255,0.3);
   margin-top: 4px;
@@ -206,6 +230,13 @@ html, body {
 <div id="shadow"></div>
 <canvas id="viewer-3d"></canvas>
 
+<a id="back-btn" href="index.html" aria-label="Retour à la carte">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M19 12H5"/>
+    <path d="M12 19l-7-7 7-7"/>
+  </svg>
+</a>
+
 <div id="hint">Glissez pour explorer</div>
 
 <div id="ui-controls">
@@ -228,10 +259,10 @@ html, body {
 <div id="capture-flash"></div>
 
 <div id="loader">
-  <div class="logo">FOOD<span>3D</span></div>
+  <div class="logo">CF<span>&amp;</span>CM</div>
   <div class="loader-bar"><div id="loader-fill"></div></div>
   <div id="loader-percent">0%</div>
-  <div class="loader-hint">Chargement du modèle 3D</div>
+  <div class="loader-hint">Préparation de la tarte 3D</div>
 </div>
 
 <div id="camera-denied">
@@ -241,7 +272,6 @@ html, body {
   </div>
 </div>
 
-<!-- PlayCanvas 2.17.2 — UMD build, expose global `pc` -->
 <script src="https://cdn.jsdelivr.net/npm/playcanvas@2.17.2/build/playcanvas.min.js"
         onerror="document.getElementById('loader-percent').textContent='ERR CDN PlayCanvas'"></script>
 <script>
@@ -263,19 +293,24 @@ html, body {
     loaderPercent.textContent = Math.round(p) + '%';
   };
 
+  // ---------- 1. CAMERA ----------
   let stream = null;
   let currentFacingMode = 'environment';
 
   async function startCamera(facingMode) {
-    if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
-    stream = await navigator.mediaDevices.getUserMedia({
+    if (stream) {
+      stream.getTracks().forEach(t => t.stop());
+      stream = null;
+    }
+    const constraints = {
       video: {
         facingMode: { ideal: facingMode },
         width:  { ideal: 1920 },
         height: { ideal: 1080 }
       },
       audio: false
-    });
+    };
+    stream = await navigator.mediaDevices.getUserMedia(constraints);
     video.srcObject = stream;
     await video.play();
     currentFacingMode = facingMode;
@@ -286,21 +321,23 @@ html, body {
     await startCamera('environment');
     setProgress(15);
   } catch (err) {
-    console.error('[Food3D] Camera denied:', err);
+    console.error('[CF&CM] Camera denied or unavailable:', err);
     $('camera-denied').classList.add('visible');
     loader.style.display = 'none';
     return;
   }
 
+  // ---------- 2. PLAYCANVAS ----------
   if (typeof pc === 'undefined') {
-    console.error('[Food3D] PlayCanvas not loaded');
+    console.error('[CF&CM] PlayCanvas not loaded');
     return;
   }
 
   const app = new pc.AppBase(canvas);
   const gfxDevice = await pc.createGraphicsDevice(canvas, {
     deviceTypes: ['webgl2', 'webgl1'],
-    antialias: true, alpha: true,
+    antialias: true,
+    alpha: true,
     preserveDrawingBuffer: true,
     powerPreference: 'high-performance'
   });
@@ -330,14 +367,29 @@ html, body {
   app.scene.skyboxIntensity = 0;
   setProgress(28);
 
-  // Composition hardcodée
+  // ============================================================
+  //   COMPOSITION — AJUSTÉE POUR CF&CM
+  // ============================================================
+  //  CENTRAGE  : tarte au centre, légèrement au-dessus (hauteur yeux/cheveux)
+  //  CADRAGE   : dézoomée pour ~18% de marge d'air autour
+  //  ROTATION  : statique, 360° libre, vitesse élégante
+  //  INCLINAISON : très subtile (max 8°)
+  // ============================================================
   const SPLAT_POS_X = 0, SPLAT_POS_Y = 0, SPLAT_POS_Z = 0;
   const CAM_POS_X   = 0, CAM_POS_Y   = 0, CAM_POS_Z   = 5800;
-  const SPLAT_SCALE = 3000;
+
+  // Scale réduit (3000 → 2400) → marge d'air autour de la tarte
+  const SPLAT_SCALE = 2400;
+
+  // Orientation du splat dans l'espace monde
   const SPLAT_EULER_X = -90, SPLAT_EULER_Y = 0, SPLAT_EULER_Z = 180;
   const SPLAT_TRIM_X  = 12,  SPLAT_TRIM_Y  = 0, SPLAT_TRIM_Z  = 0;
-  const SPLAT_LIFT_Y  = 2500;
-  const FOV_Y         = 50;
+
+  // Décalage vertical : positif = monte la tarte au-dessus du centre
+  // +400 ≈ 7,4% au-dessus du centre vertical (= hauteur yeux/cheveux)
+  const SPLAT_LIFT_Y  = 400;
+
+  const FOV_Y = 50;
 
   const cameraEntity = new pc.Entity('camera');
   cameraEntity.addComponent('camera', {
@@ -351,6 +403,7 @@ html, body {
   app.root.addChild(cameraEntity);
   setProgress(40);
 
+  // ---------- LOAD SPLAT ----------
   const splatAsset = new pc.Asset('fraise', 'gsplat', { url: 'fraise.ply' });
   app.assets.add(splatAsset);
   splatAsset.on('progress', (received, total) => {
@@ -364,7 +417,7 @@ html, body {
       app.assets.load(splatAsset);
     });
   } catch (err) {
-    console.error('[Food3D] Splat load failed:', err);
+    console.error('[CF&CM] Splat load failed:', err);
     loader.style.display = 'none';
     return;
   }
@@ -384,7 +437,8 @@ html, body {
     SPLAT_EULER_Z + SPLAT_TRIM_Z
   );
 
-  const TART_LOCAL_CENTRE = new pc.Vec3(0.165, 0.623, -1.573);
+  // Centre géométrique du splat (1% trim bbox, calculé hors-ligne sur fraise.ply)
+  const TART_LOCAL_CENTRE = new pc.Vec3(0.1644, 0.5843, -1.5571);
   const _scaled = new pc.Vec3(
     TART_LOCAL_CENTRE.x * SPLAT_SCALE,
     TART_LOCAL_CENTRE.y * SPLAT_SCALE,
@@ -405,7 +459,7 @@ html, body {
   await new Promise((r) => requestAnimationFrame(r));
   setProgress(98);
 
-  // Interaction
+  // ---------- INTERACTION ----------
   let isDragging = false;
   let activePointerId = null;
   let lastX = 0, lastY = 0;
@@ -413,7 +467,12 @@ html, body {
   let targetRotY = 0, targetRotX = 0;
   let rotY = 0, rotX = 0;
   let userInteracted = false;
-  const ROT_SPEED = 0.6, SMOOTH = 0.25, FRICTION = 0.94, MAX_TILT = 40;
+
+  // Vitesse ralentie pour rotation élégante
+  const ROT_SPEED = 0.4;
+  const SMOOTH    = 0.22;   // un peu plus de lissage → mouvement soyeux
+  const FRICTION  = 0.95;   // inertie un peu plus longue → effet continu
+  const MAX_TILT  = 8;      // 5-10° demandé → très subtil
 
   function onDown(e) {
     if (activePointerId !== null) return;
@@ -444,6 +503,7 @@ html, body {
   canvas.addEventListener('pointerup',     onUp);
   canvas.addEventListener('pointercancel', onUp);
 
+  // ---------- UPDATE LOOP (statique en position, rotation user seulement) ----------
   let t0 = performance.now();
   app.on('update', (dt) => {
     const t = (performance.now() - t0) / 1000;
@@ -457,19 +517,21 @@ html, body {
     rotY += (targetRotY - rotY) * SMOOTH;
     rotX += (targetRotX - rotX) * SMOOTH;
     pivot.setLocalEulerAngles(rotX, 0, rotY);
-    const s = 1 + Math.sin(t * 1.2) * 0.04;
-    const o = 0.85 + Math.sin(t * 1.2) * 0.08;
+
+    // Ombre statique avec respiration ultra-subtile
+    const s = 1 + Math.sin(t * 1.0) * 0.025;
+    const o = 0.82 + Math.sin(t * 1.0) * 0.05;
     shadowEl.style.transform = `translate(-50%, -50%) scale(${s})`;
     shadowEl.style.opacity = o.toFixed(2);
   });
 
   setProgress(100);
-  setTimeout(() => hint.classList.add('faded'), 4000);
+  setTimeout(() => hint.classList.add('faded'), 4500);
 
   window.addEventListener('resize', () => app.resizeCanvas());
   window.addEventListener('orientationchange', () => setTimeout(() => app.resizeCanvas(), 200));
 
-  // Flip camera
+  // ---------- FLIP CAMERA ----------
   let flipLock = false;
   flipBtn.addEventListener('click', async () => {
     if (flipLock) return;
@@ -478,7 +540,7 @@ html, body {
     const next = currentFacingMode === 'environment' ? 'user' : 'environment';
     try { await startCamera(next); }
     catch (err) {
-      console.error('[Food3D] Flip failed:', err);
+      console.error('[CF&CM] Flip failed:', err);
       try { await startCamera(currentFacingMode); } catch (_) {}
     } finally {
       setTimeout(() => {
@@ -488,7 +550,7 @@ html, body {
     }
   });
 
-  // Capture
+  // ---------- CAPTURE ----------
   captureBtn.addEventListener('click', () => {
     flash.classList.add('flash');
     setTimeout(() => flash.classList.remove('flash'), 120);
@@ -525,14 +587,15 @@ html, body {
       ctx.fillRect(0, 0, W, H);
     }
 
-    const cx = W / 2, cy = H * 0.62;
-    const rx = W * 0.21, ry = H * 0.035;
+    // Ombre repositionnée à 58% (sync avec CSS)
+    const cx = W / 2, cy = H * 0.58;
+    const rx = W * 0.19, ry = H * 0.032;
     ctx.save();
     ctx.translate(cx, cy);
     ctx.scale(1, ry / rx);
     const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, rx);
-    grad.addColorStop(0,    'rgba(0,0,0,0.55)');
-    grad.addColorStop(0.35, 'rgba(0,0,0,0.30)');
+    grad.addColorStop(0,    'rgba(0,0,0,0.50)');
+    grad.addColorStop(0.35, 'rgba(0,0,0,0.25)');
     grad.addColorStop(1,    'rgba(0,0,0,0)');
     ctx.fillStyle = grad;
     ctx.beginPath(); ctx.arc(0, 0, rx, 0, Math.PI * 2); ctx.fill();
@@ -542,10 +605,10 @@ html, body {
 
     out.toBlob((blob) => {
       if (!blob) return;
-      const filename = `food3d-${Date.now()}.jpg`;
+      const filename = `cfcm-${Date.now()}.jpg`;
       const file = new File([blob], filename, { type: 'image/jpeg' });
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        navigator.share({ files: [file], title: 'Food3D' }).catch(() => downloadBlob(blob, filename));
+        navigator.share({ files: [file], title: 'CF&CM · Tarte aux Fraises' }).catch(() => downloadBlob(blob, filename));
       } else {
         downloadBlob(blob, filename);
       }
@@ -571,7 +634,7 @@ html, body {
   }, 200);
 
 })().catch(err => {
-  console.error('[Food3D] FATAL', err);
+  console.error('[CF&CM] FATAL', err);
 });
 </script>
 </body>
