@@ -3,62 +3,69 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#FFFFFF" />
-  <meta name="description" content="Carte numérique du restaurant — visualisation 3D des plats par CF&CM" />
-  <title>La Maison Auberge — Carte numérique CF&CM</title>
+  <meta name="theme-color" content="#faf8f3" />
+  <meta name="description" content="La Maison Auberge — Carte numérique avec visualisation 3D des plats par CF&amp;CM" />
+  <title>La Maison Auberge — Carte numérique CF&amp;CM</title>
 
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
-    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Jost:wght@300;400;500;600&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Hanken+Grotesk:wght@300;400;500;600&display=swap"
     rel="stylesheet"
   />
 
+  <!-- Styles -->
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <!-- ─────────  Header  ───────── -->
-  <header class="header" role="banner">
-    <div class="brand" aria-label="CF et CM">
-      <span class="brand__bracket brand__bracket--tl" aria-hidden="true"></span>
-      <span class="brand__bracket brand__bracket--br" aria-hidden="true"></span>
-      <span class="brand__text">
-        <span class="brand__mono">CF</span>
-        <span class="brand__amp">&amp;</span>
-        <span class="brand__mono brand__mono--accent">CM</span>
-      </span>
+
+  <!-- ─────────  Brand Header  ───────── -->
+  <header class="brand-header" data-reveal>
+    <div class="brand-mark">
+      <span>CF</span>
+      <span class="brand-amp">&amp;</span>
+      <span>CM</span>
     </div>
-
-    <div class="header__divider" aria-hidden="true"></div>
-
-    <h1 class="restaurant">
-      <span class="restaurant__eyebrow">Carte du soir</span>
-      <span class="restaurant__name">La Maison Auberge</span>
-      <span class="restaurant__location">Arles · Provence</span>
-    </h1>
-
-    <p class="intro">
-      Sélectionnez un plat pour le découvrir en trois dimensions —
-      <em>une visualisation fidèle, signée CF&amp;CM.</em>
-    </p>
+    <p class="brand-tagline">Visualisation 3D · Restauration</p>
   </header>
 
-  <!-- ─────────  Menu  ───────── -->
-  <main class="menu" id="menu" role="main">
-    <!-- Sections will be injected by script.js -->
-  </main>
+  <!-- ─────────  Restaurant Hero  ───────── -->
+  <section class="restaurant-hero">
+    <p class="hero-eyebrow" data-reveal data-reveal-delay="1">Carte du soir</p>
+    <h1 class="restaurant-name" data-reveal data-reveal-delay="2">La Maison Auberge</h1>
+
+    <div class="hero-rule" data-reveal data-reveal-delay="3">
+      <span class="rule-line"></span>
+      <svg class="rule-ornament" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true">
+        <circle cx="11" cy="11" r="3"></circle>
+        <circle cx="11" cy="11" r="8" opacity="0.4"></circle>
+      </svg>
+      <span class="rule-line"></span>
+    </div>
+
+    <p class="restaurant-sub" data-reveal data-reveal-delay="4">Arles · Provence</p>
+    <p class="restaurant-sub" data-reveal data-reveal-delay="5" style="margin-top: 24px; font-size: clamp(15px, 1.8vw, 17px);">
+      Sélectionnez un plat pour le découvrir en trois dimensions —<br />
+      <em>une visualisation fidèle, signée CF&amp;CM.</em>
+    </p>
+  </section>
+
+  <!-- ─────────  Menu (injecté par script.js)  ───────── -->
+  <main id="menu" role="main"></main>
 
   <!-- ─────────  Footer  ───────── -->
-  <footer class="footer" role="contentinfo">
-    <div class="footer__mark">
-      <span class="brand__mono">CF</span><span class="brand__amp">&amp;</span><span class="brand__mono brand__mono--accent">CM</span>
+  <footer class="site-footer">
+    <div class="footer-mark">
+      CF <span class="brand-amp">&amp;</span> CM
     </div>
-    <p class="footer__line">Visualisation 3D pour la restauration</p>
-    <p class="footer__line footer__line--muted">
-      <a href="https://cf-cm.com" class="footer__link">cf-cm.com</a>
+    <p>Visualisation 3D pour la restauration de prestige</p>
+    <p class="footer-fine">
+      <a href="https://cf-cm.com">cf-cm.com</a>
     </p>
   </footer>
 
+  <!-- ─────────  Script  ───────── -->
   <script src="script.js"></script>
 </body>
 </html>
