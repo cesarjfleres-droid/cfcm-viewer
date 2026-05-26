@@ -37,15 +37,15 @@
       static: true
     },
     'salade-homard': {
-      file: 'salade.ply',
-      scale: 2400,
-      lift: 400,
-      euler: { x: -90, y: 0, z: 180 },
-      trim:  { x: 0, y: 0, z: 0 },
-      centerLocal: { x: 1.4569, y: 0.5338, z: 1.1778 },
-      defaultPitch: 0,
-      defaultYaw: 0,
-      static: false
+  file: 'salade.ply',
+  scale: 2400,
+  lift: 400,
+  euler: { x: -90, y: 0, z: 180 },
+  trim:  { x: 0, y: 0, z: 0 },
+  centerLocal: { x: 1.4569, y: 0.5338, z: 1.1778 },
+  defaultPitch: -6.7,
+  defaultYaw: 336.1,
+  static: true
     },
   };
 
