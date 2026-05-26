@@ -46,7 +46,7 @@
   defaultPitch: -6.7,
   defaultYaw: 336.1,
   static: true
-    },
+},
   };
 
   const urlParams = new URLSearchParams(location.search);
