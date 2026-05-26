@@ -1,17 +1,12 @@
 /* =================================================================
    CF&CM — Carte numérique La Maison Auberge
-   Version : 2.0 (Production-ready, classes alignées avec style.css)
+   Version : 2.1 — 2 PLATS ACTIFS EN 3D (fraise + salade homard)
    ================================================================= */
 
-/* ─────────────────────────────────────────────────────────────────
-   ⚙️  CONFIGURATION
-   ───────────────────────────────────────────────────────────────── */
-// Viewer 3D local (même repo GitHub Pages)
+/* ⚙️  Viewer 3D local */
 const VIEWER_URL = 'viewer.html';
 
-/* ─────────────────────────────────────────────────────────────────
-   📋  Données du menu
-   ───────────────────────────────────────────────────────────────── */
+/* 📋  Données du menu — Modifier 'active: true/false' pour activer un plat */
 const MENU = [
   {
     section: 'Entrées',
@@ -21,7 +16,9 @@ const MENU = [
       { id: 'tartare-saumon', name: 'Tartare de saumon',         desc: "Saumon d'Écosse au couteau, aneth, citron vert, huile de noisette.",         price: 22, family: 'seafood',     active: false },
       { id: 'veloute',        name: 'Velouté de potimarron',     desc: "Crème de châtaigne, copeaux de truffe d'automne, brioche dorée.",            price: 18, family: 'savory-warm', active: false },
       { id: 'st-jacques',     name: 'Carpaccio de Saint-Jacques',desc: "Saint-Jacques de plongée, vinaigrette yuzu, baies roses, micro-pousses.",    price: 32, family: 'seafood',     active: false },
-      { id: 'homard',         name: 'Salade de homard breton',   desc: "Homard bleu rôti, pomme verte, mesclun, mayonnaise au corail.",              price: 38, family: 'fresh',       active: false },
+
+      // ⭐  PLAT ACTIF #2 — Salade aux fruits de mer
+      { id: 'salade-homard',  name: 'Salade aux fruits de mer',  desc: "Homard bleu rôti, pomme verte, mesclun, mayonnaise au corail, fruits de mer de saison.", price: 38, family: 'seafood', active: true },
     ],
   },
   {
@@ -49,7 +46,7 @@ const MENU = [
     section: 'Desserts',
     sectionNumber: 'IV',
     items: [
-      // ⭐  LE SEUL PLAT ACTIF — démo fonctionnelle (Tarte aux fraises)
+      // ⭐  PLAT ACTIF #1 — Tarte aux fraises
       { id: 'tarte-fraises', name: 'Tarte aux fraises',   desc: "Pâte sablée à la vanille, crème pâtissière, fraises de Carpentras, basilic frais.", price: 14, family: 'sweet', active: true },
 
       { id: 'souffle',       name: 'Soufflé au Grand Marnier', desc: "Soufflé minute à l'orange, sauce chocolat noir Valrhona 70%.",                price: 16, family: 'sweet', active: false },
@@ -61,9 +58,7 @@ const MENU = [
   },
 ];
 
-/* ─────────────────────────────────────────────────────────────────
-   🎨  Icônes SVG
-   ───────────────────────────────────────────────────────────────── */
+/* 🎨  Icônes SVG */
 const ICON_CUBE = `
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
     <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
@@ -86,19 +81,8 @@ const ICON_LOCK = `
   </svg>
 `;
 
-const ICON_ORNAMENT = `
-  <svg class="rule-ornament" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true">
-    <circle cx="11" cy="11" r="3"></circle>
-    <circle cx="11" cy="11" r="8" opacity="0.4"></circle>
-  </svg>
-`;
-
-/* ─────────────────────────────────────────────────────────────────
-   🛠  Helpers
-   ───────────────────────────────────────────────────────────────── */
-function formatPrice(price) {
-  return `${price} €`;
-}
+/* 🛠  Helpers */
+function formatPrice(price) { return price + ' €'; }
 
 function renderDish(dish, globalIndex) {
   const isActive = dish.active === true;
@@ -156,18 +140,15 @@ function renderSection(section, startIndex) {
   `;
 }
 
-/* ─────────────────────────────────────────────────────────────────
-   🚀  Initialisation
-   ───────────────────────────────────────────────────────────────── */
+/* 🚀  Initialisation */
 function init() {
   try {
     const menuEl = document.getElementById('menu');
     if (!menuEl) {
-      console.error('[CF&CM] Élément #menu introuvable dans le DOM');
+      console.error('[CF&CM] Élément #menu introuvable');
       return;
     }
 
-    // Génère le HTML en gardant un compteur global pour la numérotation
     let globalIndex = 0;
     const sectionsHTML = MENU.map(section => {
       const html = renderSection(section, globalIndex);
@@ -177,10 +158,8 @@ function init() {
 
     menuEl.innerHTML = sectionsHTML;
 
-    // Animation reveal au scroll
     initScrollReveal();
 
-    // Branche les boutons 3D actifs
     const activeButtons = document.querySelectorAll('.dish-cta--active[data-dish]');
     activeButtons.forEach(btn => {
       btn.addEventListener('click', handleView3D);
@@ -197,7 +176,6 @@ function initScrollReveal() {
     document.querySelectorAll('[data-reveal]').forEach(el => el.classList.add('is-visible'));
     return;
   }
-
   const observer = new IntersectionObserver(
     (entries) => {
       entries.forEach(entry => {
@@ -209,7 +187,6 @@ function initScrollReveal() {
     },
     { rootMargin: '0px 0px -80px 0px', threshold: 0.05 }
   );
-
   document.querySelectorAll('[data-reveal]').forEach(el => observer.observe(el));
 }
 
@@ -217,21 +194,15 @@ function handleView3D(event) {
   try {
     const btn = event.currentTarget;
     const dishId = btn.getAttribute('data-dish');
-
     const separator = VIEWER_URL.includes('?') ? '&' : '?';
     const target = `${VIEWER_URL}${separator}dish=${encodeURIComponent(dishId)}`;
-
-    // Feedback visuel avant redirection
     btn.style.transform = 'scale(0.97)';
-    setTimeout(() => {
-      window.location.href = target;
-    }, 150);
+    setTimeout(() => { window.location.href = target; }, 150);
   } catch (err) {
     console.error('[CF&CM] Erreur redirection 3D :', err);
   }
 }
 
-// Lance l'app
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
 } else {

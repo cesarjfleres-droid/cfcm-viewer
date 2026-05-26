@@ -1,9 +1,9 @@
 /* Food3D · mobile camera-overlay viewer
- * Vanilla JS + PlayCanvas. No tracking — pseudo-AR illusion.
- * v5 : calibration finale — 60° max, swipe hypersensible
- *   - Axe yaw fixé sur Y (au lieu de Z, ancien bug)
- *   - Tilt: ±60° (anti-artefacts Gaussian Splatting)
- *   - Sensibilité verticale x4 pour swipe court
+ * v6 : Multi-plats dynamique + centrage automatique
+ *   - Lit ?dish=XXX dans l'URL et charge le bon .ply
+ *   - Centrage géométrique automatique (plus de hardcoding par plat)
+ *   - Inclinaison max 60° (anti-artefacts), swipe progressif
+ *   - Axe yaw fixé sur Y
  */
 (async function main() {
   const $ = (id) => document.getElementById(id);
@@ -22,6 +22,33 @@
     loaderFill.style.width = p + '%';
     loaderPercent.textContent = Math.round(p) + '%';
   };
+
+  // ============================================================
+  //   📋 CATALOGUE DES PLATS — Modifier ici pour ajouter un plat
+  // ============================================================
+  const DISH_CATALOG = {
+    'tarte-fraises': {
+      file: 'fraise.ply',
+      scale: 2400,
+      lift: 400,
+      euler: { x: -90, y: 0, z: 180 },
+      trim: { x: 12, y: 0, z: 0 }
+    },
+    'salade-homard': {
+      file: 'salade.ply',
+      scale: 2400,     // À ajuster selon le rendu
+      lift: 400,       // À ajuster selon le rendu
+      euler: { x: -90, y: 0, z: 180 },
+      trim: { x: 0, y: 0, z: 0 }
+    },
+    // Pour ajouter un plat : copier le bloc et changer id/file
+  };
+
+  // Lire le paramètre ?dish= dans l'URL
+  const urlParams = new URLSearchParams(location.search);
+  const dishId = urlParams.get('dish') || 'tarte-fraises';  // tarte par défaut
+  const dish = DISH_CATALOG[dishId] || DISH_CATALOG['tarte-fraises'];
+  console.log('[Food3D v6] Loading dish:', dishId, '→', dish.file);
 
   // ---------- 1. CAMERA ----------
   let stream = null;
@@ -101,16 +128,15 @@
   setProgress(28);
 
   // ============================================================
-  //   COMPOSITION (hardcoded — préservée à l'identique)
+  //   COMPOSITION (paramètres tirés du catalogue)
   // ============================================================
   const SPLAT_POS_X = 0, SPLAT_POS_Y = 0, SPLAT_POS_Z = 0;
   const CAM_POS_X   = 0, CAM_POS_Y   = 0, CAM_POS_Z   = 5800;
-  const SPLAT_SCALE = 2400;
-  const SPLAT_EULER_X = -90, SPLAT_EULER_Y = 0, SPLAT_EULER_Z = 180;
-  const SPLAT_TRIM_X  = 12,  SPLAT_TRIM_Y  = 0, SPLAT_TRIM_Z  = 0;
-  const SPLAT_LIFT_Y  = 400;
+  const SPLAT_SCALE = dish.scale;
+  const SPLAT_EULER_X = dish.euler.x, SPLAT_EULER_Y = dish.euler.y, SPLAT_EULER_Z = dish.euler.z;
+  const SPLAT_TRIM_X  = dish.trim.x,  SPLAT_TRIM_Y  = dish.trim.y, SPLAT_TRIM_Z  = dish.trim.z;
+  const SPLAT_LIFT_Y  = dish.lift;
   const FOV_Y         = 50;
-  // ============================================================
 
   const cameraEntity = new pc.Entity('camera');
   cameraEntity.addComponent('camera', {
@@ -126,8 +152,8 @@
   app.root.addChild(cameraEntity);
   setProgress(40);
 
-  // ---------- 4. LOAD SPLAT ----------
-  const splatAsset = new pc.Asset('fraise', 'gsplat', { url: 'fraise.ply' });
+  // ---------- 4. LOAD SPLAT DYNAMIQUE ----------
+  const splatAsset = new pc.Asset(dishId, 'gsplat', { url: dish.file });
   app.assets.add(splatAsset);
 
   splatAsset.on('progress', (received, total) => {
@@ -165,22 +191,42 @@
     SPLAT_EULER_Z + SPLAT_TRIM_Z
   );
 
-  // ---------- Centrage opaque (offline-computed) ----------
-  const TART_LOCAL_CENTRE = new pc.Vec3(0.1644, 0.5843, -1.5571);
-  const _scaled = new pc.Vec3(
-    TART_LOCAL_CENTRE.x * SPLAT_SCALE,
-    TART_LOCAL_CENTRE.y * SPLAT_SCALE,
-    TART_LOCAL_CENTRE.z * SPLAT_SCALE
-  );
-  const _rot = new pc.Quat();
-  _rot.setFromEulerAngles(
-    SPLAT_EULER_X + SPLAT_TRIM_X,
-    SPLAT_EULER_Y + SPLAT_TRIM_Y,
-    SPLAT_EULER_Z + SPLAT_TRIM_Z
-  );
-  const _rotated = new pc.Vec3();
-  _rot.transformVector(_scaled, _rotated);
-  splatEntity.setLocalPosition(-_rotated.x, -_rotated.y + SPLAT_LIFT_Y, -_rotated.z);
+  // ---------- Centrage automatique via bounding box ----------
+  // On utilise l'AABB (Axis-Aligned Bounding Box) du splat pour calculer
+  // le centre géométrique sans hardcoding.
+  await new Promise((r) => requestAnimationFrame(r));
+  let centerX = 0, centerY = 0, centerZ = 0;
+  try {
+    const aabb = splatEntity.gsplat.instance.aabb;
+    if (aabb && aabb.center) {
+      const c = aabb.center;
+      centerX = c.x;
+      centerY = c.y;
+      centerZ = c.z;
+      console.log('[Food3D v6] Auto-center:', { x: centerX, y: centerY, z: centerZ });
+    }
+  } catch (e) {
+    console.warn('[Food3D v6] Auto-center failed, fallback to fraise hardcoded:', e);
+    // Fallback : valeurs de la fraise (compatibilité descendante)
+    const fallback = new pc.Vec3(0.1644, 0.5843, -1.5571);
+    const _scaled = new pc.Vec3(
+      fallback.x * SPLAT_SCALE,
+      fallback.y * SPLAT_SCALE,
+      fallback.z * SPLAT_SCALE
+    );
+    const _rot = new pc.Quat();
+    _rot.setFromEulerAngles(
+      SPLAT_EULER_X + SPLAT_TRIM_X,
+      SPLAT_EULER_Y + SPLAT_TRIM_Y,
+      SPLAT_EULER_Z + SPLAT_TRIM_Z
+    );
+    const _rotated = new pc.Vec3();
+    _rot.transformVector(_scaled, _rotated);
+    centerX = _rotated.x;
+    centerY = _rotated.y;
+    centerZ = _rotated.z;
+  }
+  splatEntity.setLocalPosition(-centerX, -centerY + SPLAT_LIFT_Y, -centerZ);
 
   app.start();
   await new Promise((r) => requestAnimationFrame(r));
@@ -188,14 +234,14 @@
   setProgress(98);
 
   // ============================================================
-  //   ⚙️  CONTRÔLES INTERACTION — v5 CALIBRATION FINALE
+  //   ⚙️  CONTRÔLES INTERACTION
   // ============================================================
-  const ROT_SPEED_H   = 0.4;     // Vitesse rotation horizontale (yaw)
-  const ROT_SPEED_V   = 2.5;     // Vitesse rotation verticale (pitch) — HYPER-SENSIBLE
-  const SMOOTH        = 0.18;    // Lissage (plus bas = réponse plus directe)
-  const FRICTION      = 0.88;    // Inertie (plus bas = stop plus net)
-  const MAX_TILT_UP   = 60;      // Inclinaison MAX vers le haut (voir le dessus)
-  const MAX_TILT_DOWN = 60;      // Inclinaison MAX vers le bas (voir le dessous)
+  const ROT_SPEED_H   = 0.4;
+  const ROT_SPEED_V   = 0.6;     // Sensibilité progressive (contrôle précis)
+  const SMOOTH        = 0.22;
+  const FRICTION      = 0.93;
+  const MAX_TILT_UP   = 60;      // Vue plongeante anti-artefacts
+  const MAX_TILT_DOWN = 60;
   // ============================================================
 
   // ---------- 5. INTERACTION ----------
@@ -230,8 +276,8 @@
     const dy = e.clientY - lastY;
     lastX = e.clientX;
     lastY = e.clientY;
-    velYaw   = dx * ROT_SPEED_H;       // swipe horizontal -> yaw (Y axis)
-    velPitch = dy * ROT_SPEED_V;       // swipe vertical -> pitch (X axis)
+    velYaw   = dx * ROT_SPEED_H;
+    velPitch = dy * ROT_SPEED_V;
     targetYaw   += velYaw;
     targetPitch = clampPitch(targetPitch + velPitch);
   }
@@ -264,10 +310,7 @@
     yaw   += (targetYaw   - yaw)   * SMOOTH;
     pitch += (targetPitch - pitch) * SMOOTH;
 
-    // FIX v4 :
-    //   pitch (haut/bas) -> axe X
-    //   yaw   (gauche/droite) -> axe Y  [AVANT: c'etait Z, le bug]
-    //   Z reste a 0 (pas de roll)
+    // pitch -> X, yaw -> Y, Z=0 (fix axe v4)
     pivot.setLocalEulerAngles(pitch, yaw, 0);
 
     const s = 1 + Math.sin(t * 1.2) * 0.04;
@@ -279,25 +322,21 @@
   setProgress(100);
   setTimeout(() => hint.classList.add('faded'), 4000);
 
-  // ---------- DEBUG VISUEL (activable via ?debug=1) ----------
-  const DEBUG = new URLSearchParams(location.search).has('debug');
+  // ---------- DEBUG VISUEL (?debug=1) ----------
+  const DEBUG = urlParams.has('debug');
   if (DEBUG) {
     const debugEl = document.createElement('div');
-    debugEl.style.cssText = 'position:fixed;top:10px;left:10px;z-index:99999;background:rgba(0,0,0,0.85);color:#0f0;font:13px monospace;padding:10px 12px;border-radius:8px;pointer-events:none;line-height:1.6;border:1px solid #0f0;';
+    debugEl.style.cssText = 'position:fixed;top:10px;left:10px;z-index:99999;background:rgba(0,0,0,0.85);color:#0f0;font:12px monospace;padding:10px;border-radius:8px;pointer-events:none;line-height:1.5;border:1px solid #0f0;';
     document.body.appendChild(debugEl);
     setInterval(() => {
-      const pitchBar = '|'.repeat(Math.abs(Math.round(pitch / 3))).padEnd(20);
-      const yawBar   = '|'.repeat(Math.abs(Math.round((yaw % 360) / 20))).padEnd(18);
       debugEl.innerHTML =
-        '<b>PITCH (haut/bas)</b><br>' +
-        pitch.toFixed(1) + 'deg / +/-' + MAX_TILT_UP + 'deg<br>' +
-        '[' + pitchBar + ']<br><br>' +
-        '<b>YAW (gauche/droite)</b><br>' +
-        (yaw % 360).toFixed(1) + 'deg<br>' +
-        '[' + yawBar + ']<br><br>' +
-        'V=' + ROT_SPEED_V + ' H=' + ROT_SPEED_H + ' F=' + FRICTION;
+        '<b>DISH:</b> ' + dishId + '<br>' +
+        '<b>FILE:</b> ' + dish.file + '<br>' +
+        '<b>PITCH:</b> ' + pitch.toFixed(1) + 'deg<br>' +
+        '<b>YAW:</b> ' + (yaw % 360).toFixed(1) + 'deg<br>' +
+        '<b>MAX_TILT:</b> +/-' + MAX_TILT_UP + 'deg';
     }, 50);
-    console.log('[Food3D v5] DEBUG ON', { ROT_SPEED_H, ROT_SPEED_V, MAX_TILT_UP, MAX_TILT_DOWN, FRICTION, SMOOTH });
+    console.log('[Food3D v6] DEBUG ON', { dishId, dish, MAX_TILT_UP, ROT_SPEED_V });
   }
 
   // ---------- 7. RESIZE ----------
@@ -386,11 +425,11 @@
 
     out.toBlob((blob) => {
       if (!blob) return;
-      const filename = `food3d-${Date.now()}.jpg`;
+      const filename = 'food3d-' + dishId + '-' + Date.now() + '.jpg';
       const file = new File([blob], filename, { type: 'image/jpeg' });
 
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        navigator.share({ files: [file], title: 'Food3D' }).catch(() => downloadBlob(blob, filename));
+        navigator.share({ files: [file], title: 'Food3D · ' + dishId }).catch(() => downloadBlob(blob, filename));
       } else {
         downloadBlob(blob, filename);
       }
