@@ -1,7 +1,7 @@
 /* Food3D · mobile camera-overlay viewer
- * v8 : Centrage hardcodé par plat + mode statique
- *   - centerLocal : coordonnées exactes du centre dans l'espace LOCAL du PLY
- *   - L'AABB de PlayCanvas n'est pas fiable, donc on bypass et on calcule à la main
+ * v9 : Mode "tuning" via URL — permet d'essayer des angles sans toucher au code
+ *   - ?pitch=30&yaw=45 → override les valeurs par défaut du catalogue
+ *   - ?free=1 → temporairement re-active la rotation au doigt (même si static)
  */
 (async function main() {
   const $ = (id) => document.getElementById(id);
@@ -23,7 +23,6 @@
 
   // ============================================================
   //   📋 CATALOGUE DES PLATS
-  //   centerLocal = coords exactes du centre dans le PLY (mesurées hors-ligne)
   // ============================================================
   const DISH_CATALOG = {
     'tarte-fraises': {
@@ -53,7 +52,21 @@
   const urlParams = new URLSearchParams(location.search);
   const dishId = urlParams.get('dish') || 'tarte-fraises';
   const dish = DISH_CATALOG[dishId] || DISH_CATALOG['tarte-fraises'];
-  console.log('[Food3D v8] Loading dish:', dishId, '→', dish.file);
+
+  // ⭐ Override depuis l'URL pour le tuning
+  const urlPitch = parseFloat(urlParams.get('pitch'));
+  const urlYaw   = parseFloat(urlParams.get('yaw'));
+  const urlLift  = parseFloat(urlParams.get('lift'));
+  const urlFree  = urlParams.has('free');
+
+  if (!isNaN(urlPitch)) dish.defaultPitch = urlPitch;
+  if (!isNaN(urlYaw))   dish.defaultYaw   = urlYaw;
+  if (!isNaN(urlLift))  dish.lift         = urlLift;
+  if (urlFree)          dish.static       = false;
+
+  console.log('[Food3D v9] Loading dish:', dishId, '→', dish.file,
+              '| pitch:', dish.defaultPitch, 'yaw:', dish.defaultYaw,
+              'lift:', dish.lift, 'static:', dish.static);
 
   // ---------- 1. CAMERA ----------
   let stream = null;
@@ -192,7 +205,7 @@
   );
 
   // ============================================================
-  //   ⭐ CENTRAGE HARDCODÉ (fiable, indépendant de l'AABB)
+  //   CENTRAGE HARDCODÉ
   // ============================================================
   const localCenter = new pc.Vec3(
     dish.centerLocal.x,
@@ -218,8 +231,6 @@
     -worldCenter.y + SPLAT_LIFT_Y,
     -worldCenter.z
   );
-  console.log('[Food3D v8] World center:', worldCenter.toString(),
-              '→ splat positioned at:', -worldCenter.x, -worldCenter.y + SPLAT_LIFT_Y, -worldCenter.z);
 
   app.start();
   await new Promise((r) => requestAnimationFrame(r));
@@ -227,14 +238,14 @@
   setProgress(98);
 
   // ============================================================
-  //   ⚙️ CONTRÔLES
+  //   CONTRÔLES
   // ============================================================
   const ROT_SPEED_H   = 0.4;
   const ROT_SPEED_V   = 0.6;
   const SMOOTH        = 0.22;
   const FRICTION      = 0.93;
-  const MAX_TILT_UP   = 60;
-  const MAX_TILT_DOWN = 60;
+  const MAX_TILT_UP   = 90;     // ⭐ étendu à 90° pour tuning
+  const MAX_TILT_DOWN = 90;
 
   let isDragging = false;
   let activePointerId = null;
@@ -286,11 +297,11 @@
     canvas.addEventListener('pointerup',     onUp);
     canvas.addEventListener('pointercancel', onUp);
   } else {
-    console.log('[Food3D v8] STATIC mode for', dishId);
+    console.log('[Food3D v9] STATIC mode for', dishId);
     hint.style.display = 'none';
   }
 
-  // ---------- 6. UPDATE LOOP ----------
+  // ---------- UPDATE LOOP ----------
   let t0 = performance.now();
   app.on('update', (dt) => {
     const t = (performance.now() - t0) / 1000;
@@ -318,15 +329,15 @@
   const DEBUG = urlParams.has('debug');
   if (DEBUG) {
     const debugEl = document.createElement('div');
-    debugEl.style.cssText = 'position:fixed;top:10px;left:10px;z-index:99999;background:rgba(0,0,0,0.85);color:#0f0;font:12px monospace;padding:10px;border-radius:8px;pointer-events:none;line-height:1.5;border:1px solid #0f0;';
+    debugEl.style.cssText = 'position:fixed;top:10px;left:10px;z-index:99999;background:rgba(0,0,0,0.85);color:#0f0;font:13px monospace;padding:12px;border-radius:8px;pointer-events:none;line-height:1.6;border:1px solid #0f0;';
     document.body.appendChild(debugEl);
     setInterval(() => {
       debugEl.innerHTML =
         '<b>DISH:</b> ' + dishId + '<br>' +
         '<b>FILE:</b> ' + dish.file + '<br>' +
-        '<b>STATIC:</b> ' + (dish.static ? 'YES' : 'NO') + '<br>' +
-        '<b>PITCH:</b> ' + pitch.toFixed(1) + 'deg<br>' +
-        '<b>YAW:</b> ' + (yaw % 360).toFixed(1) + 'deg<br>' +
+        '<b>STATIC:</b> ' + (dish.static ? 'YES' : 'NO (free)') + '<br>' +
+        '<b style="color:#ff0">PITCH: ' + pitch.toFixed(1) + '°</b><br>' +
+        '<b style="color:#ff0">YAW: ' + (((yaw % 360) + 360) % 360).toFixed(1) + '°</b><br>' +
         '<b>LIFT:</b> ' + SPLAT_LIFT_Y;
     }, 50);
   }
