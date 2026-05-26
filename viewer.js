@@ -26,15 +26,15 @@
   // ============================================================
   const DISH_CATALOG = {
     'tarte-fraises': {
-      file: 'fraise.ply',
-      scale: 2400,
-      lift: 400,
-      euler: { x: -90, y: 0, z: 180 },
-      trim:  { x: 12, y: 0, z: 0 },
-      centerLocal: { x: 0.1644, y: 0.5843, z: -1.5571 },
-      defaultPitch: 0,
-      defaultYaw: 0,
-      static: true
+  file: 'fraise.ply',
+  scale: 2400,
+  lift: 400,
+  euler: { x: -90, y: 0, z: 180 },
+  trim:  { x: 12, y: 0, z: 0 },
+  centerLocal: { x: 0.1644, y: 0.5843, z: -1.5571 },
+  defaultPitch: 0,
+  defaultYaw: 0,
+  static: false       ← change TRUE en FALSE
     },
     'salade-homard': {
   file: 'salade.ply',
