@@ -266,7 +266,9 @@ html, body {
         onerror="document.getElementById('loader-percent').textContent='ERR CDN PlayCanvas'"></script>
 
 <!-- ✅ Logique multi-plats (catalogue dans viewer.js) -->
-<script src="viewer.js?v=100"></script>
+<script>
+  document.write('<script src="viewer.js?t=' + Date.now() + '"><\/script>');
+</script>
 
 </body>
 </html>
