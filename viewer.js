@@ -1,6 +1,6 @@
 /* Food3D · mobile camera-overlay viewer
  * Vanilla JS + PlayCanvas. No tracking — pseudo-AR illusion.
- * v3 : contrôles séparés horizontal/vertical + amplitude tilt élargie + debug log
+ * v4 : FIX axe rotation (yaw sur Y au lieu de Z) + debug visuel amélioré
  */
 (async function main() {
   const $ = (id) => document.getElementById(id);
@@ -20,7 +20,7 @@
     loaderPercent.textContent = Math.round(p) + '%';
   };
 
-  // ---------- 1. CAMERA (avec switch front/back) ----------
+  // ---------- 1. CAMERA ----------
   let stream = null;
   let currentFacingMode = 'environment';
 
@@ -185,26 +185,26 @@
   setProgress(98);
 
   // ============================================================
-  //   ⚙️  CONTRÔLES INTERACTION — RÉGLAGES PRINCIPAUX
+  //   ⚙️  CONTRÔLES INTERACTION
   // ============================================================
-  const ROT_SPEED_H = 0.4;    // Vitesse rotation horizontale (gauche/droite) — par défaut: 0.4
-  const ROT_SPEED_V = 0.6;    // Vitesse rotation verticale (haut/bas) — AUGMENTÉ pour plus de sensibilité
-  const SMOOTH      = 0.22;   // Lissage du mouvement (0 = instantané, 1 = pas de mouvement)
-  const FRICTION    = 0.95;   // Friction inertie (0.95 = inertie douce)
-  const MAX_TILT_UP   = 28;   // Inclinaison MAX vers le haut (voir le dessus de la tarte) en degrés
-  const MAX_TILT_DOWN = 28;   // Inclinaison MAX vers le bas (voir le dessous) en degrés
+  const ROT_SPEED_H = 0.4;       // Vitesse rotation horizontale (yaw)
+  const ROT_SPEED_V = 0.6;       // Vitesse rotation verticale (pitch)
+  const SMOOTH      = 0.22;      // Lissage
+  const FRICTION    = 0.95;      // Inertie
+  const MAX_TILT_UP   = 35;      // Inclinaison MAX vers le haut (voir le dessus)
+  const MAX_TILT_DOWN = 35;      // Inclinaison MAX vers le bas (voir le dessous)
   // ============================================================
 
   // ---------- 5. INTERACTION ----------
   let isDragging = false;
   let activePointerId = null;
   let lastX = 0, lastY = 0;
-  let velY = 0, velX = 0;
-  let targetRotY = 0, targetRotX = 0;
-  let rotY = 0, rotX = 0;
+  let velYaw = 0, velPitch = 0;
+  let targetYaw = 0, targetPitch = 0;
+  let yaw = 0, pitch = 0;
   let userInteracted = false;
 
-  function clampTilt(angle) {
+  function clampPitch(angle) {
     return Math.max(-MAX_TILT_DOWN, Math.min(MAX_TILT_UP, angle));
   }
 
@@ -215,7 +215,7 @@
     isDragging = true;
     userInteracted = true;
     hint.classList.add('faded');
-    velX = velY = 0;
+    velYaw = velPitch = 0;
     lastX = e.clientX;
     lastY = e.clientY;
     if (e.cancelable) e.preventDefault();
@@ -227,10 +227,10 @@
     const dy = e.clientY - lastY;
     lastX = e.clientX;
     lastY = e.clientY;
-    velY = dx * ROT_SPEED_H;          // rotation horizontale
-    velX = dy * ROT_SPEED_V;          // rotation verticale (plus rapide)
-    targetRotY += velY;
-    targetRotX = clampTilt(targetRotX + velX);
+    velYaw   = dx * ROT_SPEED_H;       // swipe horizontal -> yaw (Y axis)
+    velPitch = dy * ROT_SPEED_V;       // swipe vertical -> pitch (X axis)
+    targetYaw   += velYaw;
+    targetPitch = clampPitch(targetPitch + velPitch);
   }
   function onUp(e) {
     if (e.pointerId !== activePointerId) return;
@@ -250,18 +250,22 @@
     const t = (performance.now() - t0) / 1000;
 
     if (userInteracted && !isDragging) {
-      targetRotY += velY;
-      targetRotX = clampTilt(targetRotX + velX);
-      velY *= FRICTION;
-      velX *= FRICTION;
-      if (Math.abs(velY) < 0.01) velY = 0;
-      if (Math.abs(velX) < 0.01) velX = 0;
+      targetYaw   += velYaw;
+      targetPitch = clampPitch(targetPitch + velPitch);
+      velYaw   *= FRICTION;
+      velPitch *= FRICTION;
+      if (Math.abs(velYaw)   < 0.01) velYaw   = 0;
+      if (Math.abs(velPitch) < 0.01) velPitch = 0;
     }
 
-    rotY += (targetRotY - rotY) * SMOOTH;
-    rotX += (targetRotX - rotX) * SMOOTH;
+    yaw   += (targetYaw   - yaw)   * SMOOTH;
+    pitch += (targetPitch - pitch) * SMOOTH;
 
-    pivot.setLocalEulerAngles(rotX, 0, rotY);
+    // FIX CRITIQUE v4 :
+    //   pitch (inclinaison haut/bas) -> axe X
+    //   yaw   (rotation gauche/droite) -> axe Y  [AVANT: c'etait Z, le bug]
+    //   Z reste a 0 (pas de roll)
+    pivot.setLocalEulerAngles(pitch, yaw, 0);
 
     const s = 1 + Math.sin(t * 1.2) * 0.04;
     const o = 0.85 + Math.sin(t * 1.2) * 0.08;
@@ -272,22 +276,25 @@
   setProgress(100);
   setTimeout(() => hint.classList.add('faded'), 4000);
 
-  // ---------- DEBUG : Affichage temps réel dans la console ----------
-  // Active le mode debug en tapant la touche "D" sur clavier (PC) ou en ajoutant ?debug=1 à l'URL
+  // ---------- DEBUG VISUEL ----------
   const DEBUG = new URLSearchParams(location.search).has('debug');
   if (DEBUG) {
     const debugEl = document.createElement('div');
-    debugEl.style.cssText = 'position:fixed;top:10px;left:10px;z-index:99999;background:rgba(0,0,0,0.7);color:#0f0;font:12px monospace;padding:8px;border-radius:6px;pointer-events:none;';
+    debugEl.style.cssText = 'position:fixed;top:10px;left:10px;z-index:99999;background:rgba(0,0,0,0.85);color:#0f0;font:13px monospace;padding:10px 12px;border-radius:8px;pointer-events:none;line-height:1.6;border:1px solid #0f0;';
     document.body.appendChild(debugEl);
     setInterval(() => {
-      debugEl.innerHTML = `
-        TILT  X: ${rotX.toFixed(1)}° / ±${MAX_TILT_UP}°<br>
-        ROT   Y: ${(rotY % 360).toFixed(1)}°<br>
-        TARGET X: ${targetRotX.toFixed(1)}°<br>
-        SPEED V: ${ROT_SPEED_V} / H: ${ROT_SPEED_H}
-      `;
-    }, 100);
-    console.log('[Food3D] DEBUG mode active — params:', { ROT_SPEED_H, ROT_SPEED_V, MAX_TILT_UP, MAX_TILT_DOWN });
+      const pitchBar = '|'.repeat(Math.abs(Math.round(pitch / 2))).padEnd(18);
+      const yawBar   = '|'.repeat(Math.abs(Math.round((yaw % 360) / 20))).padEnd(18);
+      debugEl.innerHTML =
+        '<b>PITCH (haut/bas)</b><br>' +
+        pitch.toFixed(1) + 'deg / +/-' + MAX_TILT_UP + 'deg<br>' +
+        '[' + pitchBar + ']<br><br>' +
+        '<b>YAW (gauche/droite)</b><br>' +
+        (yaw % 360).toFixed(1) + 'deg<br>' +
+        '[' + yawBar + ']<br><br>' +
+        'SPEED V=' + ROT_SPEED_V + ' H=' + ROT_SPEED_H;
+    }, 50);
+    console.log('[Food3D v4] DEBUG ON', { ROT_SPEED_H, ROT_SPEED_V, MAX_TILT_UP, MAX_TILT_DOWN });
   }
 
   // ---------- 7. RESIZE ----------
