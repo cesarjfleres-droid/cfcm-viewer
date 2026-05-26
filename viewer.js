@@ -1,7 +1,9 @@
 /* Food3D · mobile camera-overlay viewer
- * v9 : Mode "tuning" via URL — permet d'essayer des angles sans toucher au code
- *   - ?pitch=30&yaw=45 → override les valeurs par défaut du catalogue
- *   - ?free=1 → temporairement re-active la rotation au doigt (même si static)
+ * v10 : Limites de rotation haut/bas/gauche/droite
+ *   - MAX_TILT_UP/DOWN : limite vertical (pitch)
+ *   - MAX_YAW : limite horizontal (yaw)
+ *   - ?pitch=X&yaw=Y : override depuis l'URL pour tuning
+ *   - ?free=1 : re-active rotation au doigt même si static
  */
 (async function main() {
   const $ = (id) => document.getElementById(id);
@@ -22,38 +24,38 @@
   };
 
   // ============================================================
-  //   📋 CATALOGUE DES PLATS
+  //   CATALOGUE DES PLATS
   // ============================================================
   const DISH_CATALOG = {
     'tarte-fraises': {
-  file: 'fraise.ply',
-  scale: 2400,
-  lift: 400,
-  euler: { x: -90, y: 0, z: 180 },
-  trim:  { x: 12, y: 0, z: 0 },
-  centerLocal: { x: 0.1644, y: 0.5843, z: -1.5571 },
-  defaultPitch: 0,
-  defaultYaw: 0,
-  static: false       
+      file: 'fraise.ply',
+      scale: 2400,
+      lift: 400,
+      euler: { x: -90, y: 0, z: 180 },
+      trim:  { x: 12, y: 0, z: 0 },
+      centerLocal: { x: 0.1644, y: 0.5843, z: -1.5571 },
+      defaultPitch: 0,
+      defaultYaw: 0,
+      static: false
     },
     'salade-homard': {
-  file: 'salade.ply',
-  scale: 3200,                                    
-  lift: 400,
-  euler: { x: -90, y: 0, z: 180 },
-  trim:  { x: 0, y: 0, z: 0 },
-  centerLocal: { x: 1.4569, y: 0.5338, z: 1.1778 },
-  defaultPitch: -6.7,
-  defaultYaw: 336.1,
-  static: true
-},
+      file: 'salade.ply',
+      scale: 3200,
+      lift: 400,
+      euler: { x: -90, y: 0, z: 180 },
+      trim:  { x: 0, y: 0, z: 0 },
+      centerLocal: { x: 1.4569, y: 0.5338, z: 1.1778 },
+      defaultPitch: -6.7,
+      defaultYaw: 336.1,
+      static: true
+    },
   };
 
   const urlParams = new URLSearchParams(location.search);
   const dishId = urlParams.get('dish') || 'tarte-fraises';
   const dish = DISH_CATALOG[dishId] || DISH_CATALOG['tarte-fraises'];
 
-  // ⭐ Override depuis l'URL pour le tuning
+  // Override depuis l'URL pour tuning
   const urlPitch = parseFloat(urlParams.get('pitch'));
   const urlYaw   = parseFloat(urlParams.get('yaw'));
   const urlLift  = parseFloat(urlParams.get('lift'));
@@ -64,7 +66,7 @@
   if (!isNaN(urlLift))  dish.lift         = urlLift;
   if (urlFree)          dish.static       = false;
 
-  console.log('[Food3D v9] Loading dish:', dishId, '→', dish.file,
+  console.log('[Food3D v10] Loading dish:', dishId, '→', dish.file,
               '| pitch:', dish.defaultPitch, 'yaw:', dish.defaultYaw,
               'lift:', dish.lift, 'static:', dish.static);
 
@@ -238,14 +240,15 @@
   setProgress(98);
 
   // ============================================================
-  //   CONTRÔLES
+  //   CONTRÔLES - LIMITES DE ROTATION
   // ============================================================
   const ROT_SPEED_H   = 0.4;
   const ROT_SPEED_V   = 0.6;
   const SMOOTH        = 0.22;
   const FRICTION      = 0.93;
-  const MAX_TILT_UP   = 35;     // ⭐ étendu à 90° pour tuning
-  const MAX_TILT_DOWN = 35;
+  const MAX_TILT_UP   = 15;   // inclinaison verticale max vers le haut
+  const MAX_TILT_DOWN = 15;   // inclinaison verticale max vers le bas
+  const MAX_YAW       = 15;   // rotation horizontale max gauche/droite
 
   let isDragging = false;
   let activePointerId = null;
@@ -259,6 +262,9 @@
 
   function clampPitch(angle) {
     return Math.max(-MAX_TILT_DOWN, Math.min(MAX_TILT_UP, angle));
+  }
+  function clampYaw(angle) {
+    return Math.max(-MAX_YAW, Math.min(MAX_YAW, angle));
   }
 
   if (!dish.static) {
@@ -283,7 +289,7 @@
       lastY = e.clientY;
       velYaw   = dx * ROT_SPEED_H;
       velPitch = dy * ROT_SPEED_V;
-      targetYaw   += velYaw;
+      targetYaw   = clampYaw(targetYaw + velYaw);
       targetPitch = clampPitch(targetPitch + velPitch);
     }
     function onUp(e) {
@@ -297,7 +303,7 @@
     canvas.addEventListener('pointerup',     onUp);
     canvas.addEventListener('pointercancel', onUp);
   } else {
-    console.log('[Food3D v9] STATIC mode for', dishId);
+    console.log('[Food3D v10] STATIC mode for', dishId);
     hint.style.display = 'none';
   }
 
@@ -306,7 +312,7 @@
   app.on('update', (dt) => {
     const t = (performance.now() - t0) / 1000;
     if (!dish.static && userInteracted && !isDragging) {
-      targetYaw   += velYaw;
+      targetYaw   = clampYaw(targetYaw + velYaw);
       targetPitch = clampPitch(targetPitch + velPitch);
       velYaw   *= FRICTION;
       velPitch *= FRICTION;
@@ -337,8 +343,8 @@
         '<b>FILE:</b> ' + dish.file + '<br>' +
         '<b>STATIC:</b> ' + (dish.static ? 'YES' : 'NO (free)') + '<br>' +
         '<b style="color:#ff0">PITCH: ' + pitch.toFixed(1) + '°</b><br>' +
-        '<b style="color:#ff0">YAW: ' + (((yaw % 360) + 360) % 360).toFixed(1) + '°</b><br>' +
-        '<b>LIFT:</b> ' + SPLAT_LIFT_Y;
+        '<b style="color:#ff0">YAW: ' + yaw.toFixed(1) + '°</b><br>' +
+        '<b>LIMITS:</b> ±' + MAX_YAW + '° / ±' + MAX_TILT_UP + '°';
     }, 50);
   }
 
