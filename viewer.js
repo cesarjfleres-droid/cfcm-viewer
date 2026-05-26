@@ -34,11 +34,11 @@
   centerLocal: { x: 0.1644, y: 0.5843, z: -1.5571 },
   defaultPitch: 0,
   defaultYaw: 0,
-  static: false       ← change TRUE en FALSE
+  static: false       
     },
     'salade-homard': {
   file: 'salade.ply',
-  scale: 3200,                                    ← 2400 → 3200 (≈ +33%)
+  scale: 3200,                                    
   lift: 400,
   euler: { x: -90, y: 0, z: 180 },
   trim:  { x: 0, y: 0, z: 0 },
