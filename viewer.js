@@ -1,8 +1,7 @@
 /* Food3D · mobile camera-overlay viewer
- * v7 : Position par défaut + mode statique par plat
- *   - defaultPitch / defaultYaw : angle de départ figé
- *   - static : si true, désactive la rotation utilisateur
- *   - trim étendu pour retournement (salade upside-down → flipper)
+ * v8 : Centrage hardcodé par plat + mode statique
+ *   - centerLocal : coordonnées exactes du centre dans l'espace LOCAL du PLY
+ *   - L'AABB de PlayCanvas n'est pas fiable, donc on bypass et on calcule à la main
  */
 (async function main() {
   const $ = (id) => document.getElementById(id);
@@ -24,6 +23,7 @@
 
   // ============================================================
   //   📋 CATALOGUE DES PLATS
+  //   centerLocal = coords exactes du centre dans le PLY (mesurées hors-ligne)
   // ============================================================
   const DISH_CATALOG = {
     'tarte-fraises': {
@@ -31,28 +31,29 @@
       scale: 2400,
       lift: 400,
       euler: { x: -90, y: 0, z: 180 },
-      trim: { x: 12, y: 0, z: 0 },
+      trim:  { x: 12, y: 0, z: 0 },
+      centerLocal: { x: 0.1644, y: 0.5843, z: -1.5571 },
       defaultPitch: 0,
       defaultYaw: 0,
-      static: false              // ← reste interactive
+      static: true
     },
     'salade-homard': {
-  file: 'salade.ply',
-  scale: 2400,
-  lift: 400,
-  euler: { x: -90, y: 0, z: 180 },
-  trim: { x: 0, y: 0, z: 0 },      // ← remis à 0 pour voir l'orientation native
-  defaultPitch: 0,
-  defaultYaw: 0,
-  static: false                     // ← reactive pour pouvoir tourner et voir
-},
+      file: 'salade.ply',
+      scale: 2400,
+      lift: 400,
+      euler: { x: -90, y: 0, z: 180 },
+      trim:  { x: 0, y: 0, z: 0 },
+      centerLocal: { x: 1.4569, y: 0.5338, z: 1.1778 },
+      defaultPitch: 0,
+      defaultYaw: 0,
+      static: true
+    },
   };
 
-  // Lire le paramètre ?dish= dans l'URL
   const urlParams = new URLSearchParams(location.search);
   const dishId = urlParams.get('dish') || 'tarte-fraises';
   const dish = DISH_CATALOG[dishId] || DISH_CATALOG['tarte-fraises'];
-  console.log('[Food3D v7] Loading dish:', dishId, '→', dish.file);
+  console.log('[Food3D v8] Loading dish:', dishId, '→', dish.file);
 
   // ---------- 1. CAMERA ----------
   let stream = null;
@@ -95,7 +96,6 @@
   }
 
   const app = new pc.AppBase(canvas);
-
   const gfxDevice = await pc.createGraphicsDevice(canvas, {
     deviceTypes: ['webgl2', 'webgl1'],
     antialias: true,
@@ -109,16 +109,12 @@
   createOptions.mouse = new pc.Mouse(canvas);
   createOptions.touch = new pc.TouchDevice(canvas);
   createOptions.componentSystems = [
-    pc.RenderComponentSystem,
-    pc.CameraComponentSystem,
-    pc.ScriptComponentSystem,
-    pc.GSplatComponentSystem
+    pc.RenderComponentSystem, pc.CameraComponentSystem,
+    pc.ScriptComponentSystem, pc.GSplatComponentSystem
   ];
   createOptions.resourceHandlers = [
-    pc.TextureHandler,
-    pc.ContainerHandler,
-    pc.ScriptHandler,
-    pc.GSplatHandler
+    pc.TextureHandler, pc.ContainerHandler,
+    pc.ScriptHandler, pc.GSplatHandler
   ];
 
   app.init(createOptions);
@@ -156,7 +152,7 @@
   app.root.addChild(cameraEntity);
   setProgress(40);
 
-  // ---------- 4. LOAD SPLAT DYNAMIQUE ----------
+  // ---------- 4. LOAD SPLAT ----------
   const splatAsset = new pc.Asset(dishId, 'gsplat', { url: dish.file });
   app.assets.add(splatAsset);
 
@@ -195,27 +191,35 @@
     SPLAT_EULER_Z + SPLAT_TRIM_Z
   );
 
-  // ---------- Centrage automatique via bounding box ----------
-  await new Promise((r) => requestAnimationFrame(r));
-  await new Promise((r) => requestAnimationFrame(r));
-  let centerX = 0, centerY = 0, centerZ = 0;
-  let centerFound = false;
-  try {
-    const aabb = splatEntity.gsplat?.instance?.aabb;
-    if (aabb && aabb.center) {
-      centerX = aabb.center.x;
-      centerY = aabb.center.y;
-      centerZ = aabb.center.z;
-      centerFound = true;
-      console.log('[Food3D v7] Auto-center OK:', { x: centerX, y: centerY, z: centerZ });
-    }
-  } catch (e) {
-    console.warn('[Food3D v7] Auto-center exception:', e);
-  }
-  if (!centerFound) {
-    console.warn('[Food3D v7] AABB indisponible — pas de centrage');
-  }
-  splatEntity.setLocalPosition(-centerX, -centerY + SPLAT_LIFT_Y, -centerZ);
+  // ============================================================
+  //   ⭐ CENTRAGE HARDCODÉ (fiable, indépendant de l'AABB)
+  // ============================================================
+  const localCenter = new pc.Vec3(
+    dish.centerLocal.x,
+    dish.centerLocal.y,
+    dish.centerLocal.z
+  );
+  const scaledCenter = new pc.Vec3(
+    localCenter.x * SPLAT_SCALE,
+    localCenter.y * SPLAT_SCALE,
+    localCenter.z * SPLAT_SCALE
+  );
+  const rotQuat = new pc.Quat();
+  rotQuat.setFromEulerAngles(
+    SPLAT_EULER_X + SPLAT_TRIM_X,
+    SPLAT_EULER_Y + SPLAT_TRIM_Y,
+    SPLAT_EULER_Z + SPLAT_TRIM_Z
+  );
+  const worldCenter = new pc.Vec3();
+  rotQuat.transformVector(scaledCenter, worldCenter);
+
+  splatEntity.setLocalPosition(
+    -worldCenter.x,
+    -worldCenter.y + SPLAT_LIFT_Y,
+    -worldCenter.z
+  );
+  console.log('[Food3D v8] World center:', worldCenter.toString(),
+              '→ splat positioned at:', -worldCenter.x, -worldCenter.y + SPLAT_LIFT_Y, -worldCenter.z);
 
   app.start();
   await new Promise((r) => requestAnimationFrame(r));
@@ -223,7 +227,7 @@
   setProgress(98);
 
   // ============================================================
-  //   ⚙️  CONTRÔLES INTERACTION
+  //   ⚙️ CONTRÔLES
   // ============================================================
   const ROT_SPEED_H   = 0.4;
   const ROT_SPEED_V   = 0.6;
@@ -232,12 +236,10 @@
   const MAX_TILT_UP   = 60;
   const MAX_TILT_DOWN = 60;
 
-  // ---------- 5. INTERACTION ----------
   let isDragging = false;
   let activePointerId = null;
   let lastX = 0, lastY = 0;
   let velYaw = 0, velPitch = 0;
-  // ⭐ Angles initiaux pris depuis le catalogue
   let targetYaw   = dish.defaultYaw   || 0;
   let targetPitch = dish.defaultPitch || 0;
   let yaw   = targetYaw;
@@ -248,7 +250,6 @@
     return Math.max(-MAX_TILT_DOWN, Math.min(MAX_TILT_UP, angle));
   }
 
-  // ⭐ Si le plat est statique → on n'écoute aucun input
   if (!dish.static) {
     function onDown(e) {
       if (activePointerId !== null) return;
@@ -285,8 +286,7 @@
     canvas.addEventListener('pointerup',     onUp);
     canvas.addEventListener('pointercancel', onUp);
   } else {
-    console.log('[Food3D v7] STATIC mode — interactions désactivées');
-    // Cache le hint "Glissez pour explorer" puisqu'il n'y a rien à explorer
+    console.log('[Food3D v8] STATIC mode for', dishId);
     hint.style.display = 'none';
   }
 
@@ -294,7 +294,6 @@
   let t0 = performance.now();
   app.on('update', (dt) => {
     const t = (performance.now() - t0) / 1000;
-
     if (!dish.static && userInteracted && !isDragging) {
       targetYaw   += velYaw;
       targetPitch = clampPitch(targetPitch + velPitch);
@@ -303,12 +302,9 @@
       if (Math.abs(velYaw)   < 0.01) velYaw   = 0;
       if (Math.abs(velPitch) < 0.01) velPitch = 0;
     }
-
     yaw   += (targetYaw   - yaw)   * SMOOTH;
     pitch += (targetPitch - pitch) * SMOOTH;
-
     pivot.setLocalEulerAngles(pitch, yaw, 0);
-
     const s = 1 + Math.sin(t * 1.2) * 0.04;
     const o = 0.85 + Math.sin(t * 1.2) * 0.08;
     shadowEl.style.transform = `translate(-50%, -50%) scale(${s})`;
@@ -318,7 +314,7 @@
   setProgress(100);
   setTimeout(() => hint.classList.add('faded'), 4000);
 
-  // ---------- DEBUG VISUEL (?debug=1) ----------
+  // ---------- DEBUG ----------
   const DEBUG = urlParams.has('debug');
   if (DEBUG) {
     const debugEl = document.createElement('div');
@@ -330,17 +326,17 @@
         '<b>FILE:</b> ' + dish.file + '<br>' +
         '<b>STATIC:</b> ' + (dish.static ? 'YES' : 'NO') + '<br>' +
         '<b>PITCH:</b> ' + pitch.toFixed(1) + 'deg<br>' +
-        '<b>YAW:</b> ' + (yaw % 360).toFixed(1) + 'deg';
+        '<b>YAW:</b> ' + (yaw % 360).toFixed(1) + 'deg<br>' +
+        '<b>LIFT:</b> ' + SPLAT_LIFT_Y;
     }, 50);
-    console.log('[Food3D v7] DEBUG ON', { dishId, dish });
   }
 
-  // ---------- 7. RESIZE ----------
+  // ---------- RESIZE ----------
   const handleResize = () => { app.resizeCanvas(); };
   window.addEventListener('resize', handleResize);
   window.addEventListener('orientationchange', () => setTimeout(handleResize, 200));
 
-  // ---------- 8. FLIP CAMERA ----------
+  // ---------- FLIP CAMERA ----------
   let flipLock = false;
   flipBtn.addEventListener('click', async () => {
     if (flipLock) return;
@@ -360,19 +356,16 @@
     }
   });
 
-  // ---------- 9. CAPTURE ----------
+  // ---------- CAPTURE ----------
   captureBtn.addEventListener('click', async () => {
     flash.classList.add('flash');
     setTimeout(() => flash.classList.remove('flash'), 120);
-
     app.render();
-
     const W = window.innerWidth  * dpr;
     const H = window.innerHeight * dpr;
     const out = document.createElement('canvas');
     out.width = W; out.height = H;
     const ctx = out.getContext('2d');
-
     const vw = video.videoWidth, vh = video.videoHeight;
     if (vw && vh) {
       const screenAR = W / H;
@@ -385,7 +378,6 @@
         sw = vw; sh = vw / screenAR;
         sx = 0; sy = (vh - sh) / 2;
       }
-
       if (currentFacingMode === 'user') {
         ctx.save();
         ctx.translate(W, 0);
@@ -399,7 +391,6 @@
       ctx.fillStyle = '#000';
       ctx.fillRect(0, 0, W, H);
     }
-
     const cx = W / 2;
     const cy = H * 0.62;
     const rx = W * 0.21;
@@ -416,14 +407,11 @@
     ctx.arc(0, 0, rx, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
-
     ctx.drawImage(canvas, 0, 0, W, H);
-
     out.toBlob((blob) => {
       if (!blob) return;
       const filename = 'food3d-' + dishId + '-' + Date.now() + '.jpg';
       const file = new File([blob], filename, { type: 'image/jpeg' });
-
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         navigator.share({ files: [file], title: 'Food3D · ' + dishId }).catch(() => downloadBlob(blob, filename));
       } else {
@@ -443,7 +431,7 @@
     setTimeout(() => URL.revokeObjectURL(url), 5000);
   }
 
-  // ---------- 10. CLEANUP ----------
+  // ---------- CLEANUP ----------
   window.addEventListener('pagehide', () => {
     if (stream) stream.getTracks().forEach(t => t.stop());
     try { app.destroy(); } catch (e) {}
