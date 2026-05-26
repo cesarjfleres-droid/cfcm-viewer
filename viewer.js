@@ -37,15 +37,15 @@
       static: false              // ← reste interactive
     },
     'salade-homard': {
-      file: 'salade.ply',
-      scale: 2400,
-      lift: 400,
-      euler: { x: -90, y: 0, z: 180 },
-      trim: { x: 180, y: 0, z: 0 },   // ← +180° pour retourner à l'endroit
-      defaultPitch: 53,                // ← angle vertical de départ
-      defaultYaw: 304.7,               // ← angle horizontal de départ
-      static: true                     // ← figée, pas de rotation utilisateur
-    },
+  file: 'salade.ply',
+  scale: 2400,
+  lift: 400,
+  euler: { x: -90, y: 0, z: 180 },
+  trim: { x: 0, y: 0, z: 0 },      // ← remis à 0 pour voir l'orientation native
+  defaultPitch: 0,
+  defaultYaw: 0,
+  static: false                     // ← reactive pour pouvoir tourner et voir
+},
   };
 
   // Lire le paramètre ?dish= dans l'URL
