@@ -1,9 +1,7 @@
 /* Food3D · mobile camera-overlay viewer
- * v10 : Limites de rotation haut/bas/gauche/droite
- *   - MAX_TILT_UP/DOWN : limite vertical (pitch)
- *   - MAX_YAW : limite horizontal (yaw)
- *   - ?pitch=X&yaw=Y : override depuis l'URL pour tuning
- *   - ?free=1 : re-active rotation au doigt même si static
+ * v11 : Mode tuning ouvert (limites 90° dans toutes directions)
+ *   - Tarte aux fraises : rotation libre pour trouver les limites max
+ *   - Le debug overlay affiche pitch/yaw en gros pour lire facilement
  */
 (async function main() {
   const $ = (id) => document.getElementById(id);
@@ -55,7 +53,6 @@
   const dishId = urlParams.get('dish') || 'tarte-fraises';
   const dish = DISH_CATALOG[dishId] || DISH_CATALOG['tarte-fraises'];
 
-  // Override depuis l'URL pour tuning
   const urlPitch = parseFloat(urlParams.get('pitch'));
   const urlYaw   = parseFloat(urlParams.get('yaw'));
   const urlLift  = parseFloat(urlParams.get('lift'));
@@ -66,9 +63,7 @@
   if (!isNaN(urlLift))  dish.lift         = urlLift;
   if (urlFree)          dish.static       = false;
 
-  console.log('[Food3D v10] Loading dish:', dishId, '→', dish.file,
-              '| pitch:', dish.defaultPitch, 'yaw:', dish.defaultYaw,
-              'lift:', dish.lift, 'static:', dish.static);
+  console.log('[Food3D v11] Loading dish:', dishId, '→', dish.file);
 
   // ---------- 1. CAMERA ----------
   let stream = null;
@@ -240,15 +235,15 @@
   setProgress(98);
 
   // ============================================================
-  //   CONTRÔLES - LIMITES DE ROTATION
+  //   CONTRÔLES - MODE TUNING (limites ouvertes à 90°)
   // ============================================================
   const ROT_SPEED_H   = 0.4;
   const ROT_SPEED_V   = 0.6;
   const SMOOTH        = 0.22;
   const FRICTION      = 0.93;
-  const MAX_TILT_UP   = 15;   // inclinaison verticale max vers le haut
-  const MAX_TILT_DOWN = 15;   // inclinaison verticale max vers le bas
-  const MAX_YAW       = 15;   // rotation horizontale max gauche/droite
+  const MAX_TILT_UP   = 90;
+  const MAX_TILT_DOWN = 90;
+  const MAX_YAW       = 90;
 
   let isDragging = false;
   let activePointerId = null;
@@ -303,7 +298,7 @@
     canvas.addEventListener('pointerup',     onUp);
     canvas.addEventListener('pointercancel', onUp);
   } else {
-    console.log('[Food3D v10] STATIC mode for', dishId);
+    console.log('[Food3D v11] STATIC mode for', dishId);
     hint.style.display = 'none';
   }
 
@@ -331,20 +326,19 @@
   setProgress(100);
   setTimeout(() => hint.classList.add('faded'), 4000);
 
-  // ---------- DEBUG ----------
+  // ---------- DEBUG (gros affichage pour tuning) ----------
   const DEBUG = urlParams.has('debug');
   if (DEBUG) {
     const debugEl = document.createElement('div');
-    debugEl.style.cssText = 'position:fixed;top:10px;left:10px;z-index:99999;background:rgba(0,0,0,0.85);color:#0f0;font:13px monospace;padding:12px;border-radius:8px;pointer-events:none;line-height:1.6;border:1px solid #0f0;';
+    debugEl.style.cssText = 'position:fixed;top:10px;left:10px;z-index:99999;background:rgba(0,0,0,0.9);color:#0f0;font:bold 18px monospace;padding:14px 18px;border-radius:10px;pointer-events:none;line-height:1.5;border:2px solid #0f0;';
     document.body.appendChild(debugEl);
     setInterval(() => {
+      const pitchArrow = pitch > 1 ? '⬇️ BAS' : (pitch < -1 ? '⬆️ HAUT' : '·');
+      const yawArrow   = yaw   > 1 ? '➡️ DROITE' : (yaw   < -1 ? '⬅️ GAUCHE' : '·');
       debugEl.innerHTML =
-        '<b>DISH:</b> ' + dishId + '<br>' +
-        '<b>FILE:</b> ' + dish.file + '<br>' +
-        '<b>STATIC:</b> ' + (dish.static ? 'YES' : 'NO (free)') + '<br>' +
-        '<b style="color:#ff0">PITCH: ' + pitch.toFixed(1) + '°</b><br>' +
-        '<b style="color:#ff0">YAW: ' + yaw.toFixed(1) + '°</b><br>' +
-        '<b>LIMITS:</b> ±' + MAX_YAW + '° / ±' + MAX_TILT_UP + '°';
+        '<span style="color:#ff0">PITCH: ' + pitch.toFixed(1) + '° ' + pitchArrow + '</span><br>' +
+        '<span style="color:#ff0">YAW: ' + yaw.toFixed(1) + '° ' + yawArrow + '</span><br>' +
+        '<span style="font-size:12px;color:#0a0">DISH: ' + dishId + '</span>';
     }, 50);
   }
 
