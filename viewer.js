@@ -1,6 +1,9 @@
 /* Food3D · mobile camera-overlay viewer
  * Vanilla JS + PlayCanvas. No tracking — pseudo-AR illusion.
- * v4 : FIX axe rotation (yaw sur Y au lieu de Z) + debug visuel amélioré
+ * v5 : calibration finale — 60° max, swipe hypersensible
+ *   - Axe yaw fixé sur Y (au lieu de Z, ancien bug)
+ *   - Tilt: ±60° (anti-artefacts Gaussian Splatting)
+ *   - Sensibilité verticale x4 pour swipe court
  */
 (async function main() {
   const $ = (id) => document.getElementById(id);
@@ -185,14 +188,14 @@
   setProgress(98);
 
   // ============================================================
-  //   ⚙️  CONTRÔLES INTERACTION
+  //   ⚙️  CONTRÔLES INTERACTION — v5 CALIBRATION FINALE
   // ============================================================
-  const ROT_SPEED_H = 0.4;       // Vitesse rotation horizontale (yaw)
-  const ROT_SPEED_V = 0.6;       // Vitesse rotation verticale (pitch)
-  const SMOOTH      = 0.22;      // Lissage
-  const FRICTION    = 0.95;      // Inertie
-  const MAX_TILT_UP   = 35;      // Inclinaison MAX vers le haut (voir le dessus)
-  const MAX_TILT_DOWN = 35;      // Inclinaison MAX vers le bas (voir le dessous)
+  const ROT_SPEED_H   = 0.4;     // Vitesse rotation horizontale (yaw)
+  const ROT_SPEED_V   = 2.5;     // Vitesse rotation verticale (pitch) — HYPER-SENSIBLE
+  const SMOOTH        = 0.18;    // Lissage (plus bas = réponse plus directe)
+  const FRICTION      = 0.88;    // Inertie (plus bas = stop plus net)
+  const MAX_TILT_UP   = 60;      // Inclinaison MAX vers le haut (voir le dessus)
+  const MAX_TILT_DOWN = 60;      // Inclinaison MAX vers le bas (voir le dessous)
   // ============================================================
 
   // ---------- 5. INTERACTION ----------
@@ -261,9 +264,9 @@
     yaw   += (targetYaw   - yaw)   * SMOOTH;
     pitch += (targetPitch - pitch) * SMOOTH;
 
-    // FIX CRITIQUE v4 :
-    //   pitch (inclinaison haut/bas) -> axe X
-    //   yaw   (rotation gauche/droite) -> axe Y  [AVANT: c'etait Z, le bug]
+    // FIX v4 :
+    //   pitch (haut/bas) -> axe X
+    //   yaw   (gauche/droite) -> axe Y  [AVANT: c'etait Z, le bug]
     //   Z reste a 0 (pas de roll)
     pivot.setLocalEulerAngles(pitch, yaw, 0);
 
@@ -276,14 +279,14 @@
   setProgress(100);
   setTimeout(() => hint.classList.add('faded'), 4000);
 
-  // ---------- DEBUG VISUEL ----------
+  // ---------- DEBUG VISUEL (activable via ?debug=1) ----------
   const DEBUG = new URLSearchParams(location.search).has('debug');
   if (DEBUG) {
     const debugEl = document.createElement('div');
     debugEl.style.cssText = 'position:fixed;top:10px;left:10px;z-index:99999;background:rgba(0,0,0,0.85);color:#0f0;font:13px monospace;padding:10px 12px;border-radius:8px;pointer-events:none;line-height:1.6;border:1px solid #0f0;';
     document.body.appendChild(debugEl);
     setInterval(() => {
-      const pitchBar = '|'.repeat(Math.abs(Math.round(pitch / 2))).padEnd(18);
+      const pitchBar = '|'.repeat(Math.abs(Math.round(pitch / 3))).padEnd(20);
       const yawBar   = '|'.repeat(Math.abs(Math.round((yaw % 360) / 20))).padEnd(18);
       debugEl.innerHTML =
         '<b>PITCH (haut/bas)</b><br>' +
@@ -292,9 +295,9 @@
         '<b>YAW (gauche/droite)</b><br>' +
         (yaw % 360).toFixed(1) + 'deg<br>' +
         '[' + yawBar + ']<br><br>' +
-        'SPEED V=' + ROT_SPEED_V + ' H=' + ROT_SPEED_H;
+        'V=' + ROT_SPEED_V + ' H=' + ROT_SPEED_H + ' F=' + FRICTION;
     }, 50);
-    console.log('[Food3D v4] DEBUG ON', { ROT_SPEED_H, ROT_SPEED_V, MAX_TILT_UP, MAX_TILT_DOWN });
+    console.log('[Food3D v5] DEBUG ON', { ROT_SPEED_H, ROT_SPEED_V, MAX_TILT_UP, MAX_TILT_DOWN, FRICTION, SMOOTH });
   }
 
   // ---------- 7. RESIZE ----------
