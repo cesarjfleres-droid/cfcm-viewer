@@ -45,7 +45,7 @@
       centerLocal: { x: 1.4569, y: 0.5338, z: 1.1778 },
       defaultPitch: 0,
       defaultYaw: 0,
-      static: true
+      static: false
     },
   };
 
