@@ -1,7 +1,7 @@
 /* Food3D · mobile camera-overlay viewer
- * v11 : Mode tuning ouvert (limites 90° dans toutes directions)
- *   - Tarte aux fraises : rotation libre pour trouver les limites max
- *   - Le debug overlay affiche pitch/yaw en gros pour lire facilement
+ * v12 : Limites asymétriques (haut/bas/gauche/droite indépendants)
+ *   - Tarte aux fraises : interactive avec limites perso
+ *   - Salade homard : figée à l'angle SuperSplat
  */
 (async function main() {
   const $ = (id) => document.getElementById(id);
@@ -63,7 +63,7 @@
   if (!isNaN(urlLift))  dish.lift         = urlLift;
   if (urlFree)          dish.static       = false;
 
-  console.log('[Food3D v11] Loading dish:', dishId, '→', dish.file);
+  console.log('[Food3D v12] Loading dish:', dishId, '→', dish.file);
 
   // ---------- 1. CAMERA ----------
   let stream = null;
@@ -235,15 +235,18 @@
   setProgress(98);
 
   // ============================================================
-  //   CONTRÔLES - MODE TUNING (limites ouvertes à 90°)
+  //   CONTRÔLES - LIMITES ASYMÉTRIQUES
+  //   PITCH négatif = HAUT, PITCH positif = BAS
+  //   YAW négatif = GAUCHE, YAW positif = DROITE
   // ============================================================
   const ROT_SPEED_H   = 0.4;
   const ROT_SPEED_V   = 0.6;
   const SMOOTH        = 0.22;
   const FRICTION      = 0.93;
-  const MAX_TILT_UP   = 90;
-  const MAX_TILT_DOWN = 90;
-  const MAX_YAW       = 90;
+  const MAX_PITCH_UP    = 50;
+  const MAX_PITCH_DOWN  = 15;
+  const MAX_YAW_LEFT    = 45;
+  const MAX_YAW_RIGHT   = 40;
 
   let isDragging = false;
   let activePointerId = null;
@@ -256,10 +259,10 @@
   let userInteracted = false;
 
   function clampPitch(angle) {
-    return Math.max(-MAX_TILT_DOWN, Math.min(MAX_TILT_UP, angle));
+    return Math.max(-MAX_PITCH_UP, Math.min(MAX_PITCH_DOWN, angle));
   }
   function clampYaw(angle) {
-    return Math.max(-MAX_YAW, Math.min(MAX_YAW, angle));
+    return Math.max(-MAX_YAW_LEFT, Math.min(MAX_YAW_RIGHT, angle));
   }
 
   if (!dish.static) {
@@ -298,7 +301,7 @@
     canvas.addEventListener('pointerup',     onUp);
     canvas.addEventListener('pointercancel', onUp);
   } else {
-    console.log('[Food3D v11] STATIC mode for', dishId);
+    console.log('[Food3D v12] STATIC mode for', dishId);
     hint.style.display = 'none';
   }
 
@@ -326,11 +329,11 @@
   setProgress(100);
   setTimeout(() => hint.classList.add('faded'), 4000);
 
-  // ---------- DEBUG (gros affichage pour tuning) ----------
+  // ---------- DEBUG ----------
   const DEBUG = urlParams.has('debug');
   if (DEBUG) {
     const debugEl = document.createElement('div');
-    debugEl.style.cssText = 'position:fixed;top:10px;left:10px;z-index:99999;background:rgba(0,0,0,0.9);color:#0f0;font:bold 18px monospace;padding:14px 18px;border-radius:10px;pointer-events:none;line-height:1.5;border:2px solid #0f0;';
+    debugEl.style.cssText = 'position:fixed;top:10px;left:10px;z-index:99999;background:rgba(0,0,0,0.9);color:#0f0;font:bold 16px monospace;padding:12px 16px;border-radius:10px;pointer-events:none;line-height:1.5;border:2px solid #0f0;';
     document.body.appendChild(debugEl);
     setInterval(() => {
       const pitchArrow = pitch > 1 ? '⬇️ BAS' : (pitch < -1 ? '⬆️ HAUT' : '·');
@@ -338,7 +341,7 @@
       debugEl.innerHTML =
         '<span style="color:#ff0">PITCH: ' + pitch.toFixed(1) + '° ' + pitchArrow + '</span><br>' +
         '<span style="color:#ff0">YAW: ' + yaw.toFixed(1) + '° ' + yawArrow + '</span><br>' +
-        '<span style="font-size:12px;color:#0a0">DISH: ' + dishId + '</span>';
+        '<span style="font-size:11px;color:#0a0">LIMITS: H+' + MAX_PITCH_DOWN + ' B-' + MAX_PITCH_UP + ' G-' + MAX_YAW_LEFT + ' D+' + MAX_YAW_RIGHT + '</span>';
     }, 50);
   }
 
