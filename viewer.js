@@ -1,9 +1,8 @@
 /* Food3D · mobile camera-overlay viewer
- * v6 : Multi-plats dynamique + centrage automatique
- *   - Lit ?dish=XXX dans l'URL et charge le bon .ply
- *   - Centrage géométrique automatique (plus de hardcoding par plat)
- *   - Inclinaison max 60° (anti-artefacts), swipe progressif
- *   - Axe yaw fixé sur Y
+ * v7 : Position par défaut + mode statique par plat
+ *   - defaultPitch / defaultYaw : angle de départ figé
+ *   - static : si true, désactive la rotation utilisateur
+ *   - trim étendu pour retournement (salade upside-down → flipper)
  */
 (async function main() {
   const $ = (id) => document.getElementById(id);
@@ -24,7 +23,7 @@
   };
 
   // ============================================================
-  //   📋 CATALOGUE DES PLATS — Modifier ici pour ajouter un plat
+  //   📋 CATALOGUE DES PLATS
   // ============================================================
   const DISH_CATALOG = {
     'tarte-fraises': {
@@ -32,23 +31,28 @@
       scale: 2400,
       lift: 400,
       euler: { x: -90, y: 0, z: 180 },
-      trim: { x: 12, y: 0, z: 0 }
+      trim: { x: 12, y: 0, z: 0 },
+      defaultPitch: 0,
+      defaultYaw: 0,
+      static: false              // ← reste interactive
     },
     'salade-homard': {
       file: 'salade.ply',
-      scale: 2400,     // À ajuster selon le rendu
-      lift: 400,       // À ajuster selon le rendu
+      scale: 2400,
+      lift: 400,
       euler: { x: -90, y: 0, z: 180 },
-      trim: { x: 0, y: 0, z: 0 }
+      trim: { x: 180, y: 0, z: 0 },   // ← +180° pour retourner à l'endroit
+      defaultPitch: 53,                // ← angle vertical de départ
+      defaultYaw: 304.7,               // ← angle horizontal de départ
+      static: true                     // ← figée, pas de rotation utilisateur
     },
-    // Pour ajouter un plat : copier le bloc et changer id/file
   };
 
   // Lire le paramètre ?dish= dans l'URL
   const urlParams = new URLSearchParams(location.search);
-  const dishId = urlParams.get('dish') || 'tarte-fraises';  // tarte par défaut
+  const dishId = urlParams.get('dish') || 'tarte-fraises';
   const dish = DISH_CATALOG[dishId] || DISH_CATALOG['tarte-fraises'];
-  console.log('[Food3D v6] Loading dish:', dishId, '→', dish.file);
+  console.log('[Food3D v7] Loading dish:', dishId, '→', dish.file);
 
   // ---------- 1. CAMERA ----------
   let stream = null;
@@ -128,7 +132,7 @@
   setProgress(28);
 
   // ============================================================
-  //   COMPOSITION (paramètres tirés du catalogue)
+  //   COMPOSITION
   // ============================================================
   const SPLAT_POS_X = 0, SPLAT_POS_Y = 0, SPLAT_POS_Z = 0;
   const CAM_POS_X   = 0, CAM_POS_Y   = 0, CAM_POS_Z   = 5800;
@@ -192,39 +196,24 @@
   );
 
   // ---------- Centrage automatique via bounding box ----------
-  // On utilise l'AABB (Axis-Aligned Bounding Box) du splat pour calculer
-  // le centre géométrique sans hardcoding.
+  await new Promise((r) => requestAnimationFrame(r));
   await new Promise((r) => requestAnimationFrame(r));
   let centerX = 0, centerY = 0, centerZ = 0;
+  let centerFound = false;
   try {
-    const aabb = splatEntity.gsplat.instance.aabb;
+    const aabb = splatEntity.gsplat?.instance?.aabb;
     if (aabb && aabb.center) {
-      const c = aabb.center;
-      centerX = c.x;
-      centerY = c.y;
-      centerZ = c.z;
-      console.log('[Food3D v6] Auto-center:', { x: centerX, y: centerY, z: centerZ });
+      centerX = aabb.center.x;
+      centerY = aabb.center.y;
+      centerZ = aabb.center.z;
+      centerFound = true;
+      console.log('[Food3D v7] Auto-center OK:', { x: centerX, y: centerY, z: centerZ });
     }
   } catch (e) {
-    console.warn('[Food3D v6] Auto-center failed, fallback to fraise hardcoded:', e);
-    // Fallback : valeurs de la fraise (compatibilité descendante)
-    const fallback = new pc.Vec3(0.1644, 0.5843, -1.5571);
-    const _scaled = new pc.Vec3(
-      fallback.x * SPLAT_SCALE,
-      fallback.y * SPLAT_SCALE,
-      fallback.z * SPLAT_SCALE
-    );
-    const _rot = new pc.Quat();
-    _rot.setFromEulerAngles(
-      SPLAT_EULER_X + SPLAT_TRIM_X,
-      SPLAT_EULER_Y + SPLAT_TRIM_Y,
-      SPLAT_EULER_Z + SPLAT_TRIM_Z
-    );
-    const _rotated = new pc.Vec3();
-    _rot.transformVector(_scaled, _rotated);
-    centerX = _rotated.x;
-    centerY = _rotated.y;
-    centerZ = _rotated.z;
+    console.warn('[Food3D v7] Auto-center exception:', e);
+  }
+  if (!centerFound) {
+    console.warn('[Food3D v7] AABB indisponible — pas de centrage');
   }
   splatEntity.setLocalPosition(-centerX, -centerY + SPLAT_LIFT_Y, -centerZ);
 
@@ -237,68 +226,76 @@
   //   ⚙️  CONTRÔLES INTERACTION
   // ============================================================
   const ROT_SPEED_H   = 0.4;
-  const ROT_SPEED_V   = 0.6;     // Sensibilité progressive (contrôle précis)
+  const ROT_SPEED_V   = 0.6;
   const SMOOTH        = 0.22;
   const FRICTION      = 0.93;
-  const MAX_TILT_UP   = 60;      // Vue plongeante anti-artefacts
+  const MAX_TILT_UP   = 60;
   const MAX_TILT_DOWN = 60;
-  // ============================================================
 
   // ---------- 5. INTERACTION ----------
   let isDragging = false;
   let activePointerId = null;
   let lastX = 0, lastY = 0;
   let velYaw = 0, velPitch = 0;
-  let targetYaw = 0, targetPitch = 0;
-  let yaw = 0, pitch = 0;
+  // ⭐ Angles initiaux pris depuis le catalogue
+  let targetYaw   = dish.defaultYaw   || 0;
+  let targetPitch = dish.defaultPitch || 0;
+  let yaw   = targetYaw;
+  let pitch = targetPitch;
   let userInteracted = false;
 
   function clampPitch(angle) {
     return Math.max(-MAX_TILT_DOWN, Math.min(MAX_TILT_UP, angle));
   }
 
-  function onDown(e) {
-    if (activePointerId !== null) return;
-    activePointerId = e.pointerId;
-    try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
-    isDragging = true;
-    userInteracted = true;
-    hint.classList.add('faded');
-    velYaw = velPitch = 0;
-    lastX = e.clientX;
-    lastY = e.clientY;
-    if (e.cancelable) e.preventDefault();
+  // ⭐ Si le plat est statique → on n'écoute aucun input
+  if (!dish.static) {
+    function onDown(e) {
+      if (activePointerId !== null) return;
+      activePointerId = e.pointerId;
+      try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+      isDragging = true;
+      userInteracted = true;
+      hint.classList.add('faded');
+      velYaw = velPitch = 0;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      if (e.cancelable) e.preventDefault();
+    }
+    function onMove(e) {
+      if (!isDragging || e.pointerId !== activePointerId) return;
+      if (e.cancelable) e.preventDefault();
+      const dx = e.clientX - lastX;
+      const dy = e.clientY - lastY;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      velYaw   = dx * ROT_SPEED_H;
+      velPitch = dy * ROT_SPEED_V;
+      targetYaw   += velYaw;
+      targetPitch = clampPitch(targetPitch + velPitch);
+    }
+    function onUp(e) {
+      if (e.pointerId !== activePointerId) return;
+      try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
+      activePointerId = null;
+      isDragging = false;
+    }
+    canvas.addEventListener('pointerdown',   onDown, { passive: false });
+    canvas.addEventListener('pointermove',   onMove, { passive: false });
+    canvas.addEventListener('pointerup',     onUp);
+    canvas.addEventListener('pointercancel', onUp);
+  } else {
+    console.log('[Food3D v7] STATIC mode — interactions désactivées');
+    // Cache le hint "Glissez pour explorer" puisqu'il n'y a rien à explorer
+    hint.style.display = 'none';
   }
-  function onMove(e) {
-    if (!isDragging || e.pointerId !== activePointerId) return;
-    if (e.cancelable) e.preventDefault();
-    const dx = e.clientX - lastX;
-    const dy = e.clientY - lastY;
-    lastX = e.clientX;
-    lastY = e.clientY;
-    velYaw   = dx * ROT_SPEED_H;
-    velPitch = dy * ROT_SPEED_V;
-    targetYaw   += velYaw;
-    targetPitch = clampPitch(targetPitch + velPitch);
-  }
-  function onUp(e) {
-    if (e.pointerId !== activePointerId) return;
-    try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
-    activePointerId = null;
-    isDragging = false;
-  }
-
-  canvas.addEventListener('pointerdown',   onDown, { passive: false });
-  canvas.addEventListener('pointermove',   onMove, { passive: false });
-  canvas.addEventListener('pointerup',     onUp);
-  canvas.addEventListener('pointercancel', onUp);
 
   // ---------- 6. UPDATE LOOP ----------
   let t0 = performance.now();
   app.on('update', (dt) => {
     const t = (performance.now() - t0) / 1000;
 
-    if (userInteracted && !isDragging) {
+    if (!dish.static && userInteracted && !isDragging) {
       targetYaw   += velYaw;
       targetPitch = clampPitch(targetPitch + velPitch);
       velYaw   *= FRICTION;
@@ -310,7 +307,6 @@
     yaw   += (targetYaw   - yaw)   * SMOOTH;
     pitch += (targetPitch - pitch) * SMOOTH;
 
-    // pitch -> X, yaw -> Y, Z=0 (fix axe v4)
     pivot.setLocalEulerAngles(pitch, yaw, 0);
 
     const s = 1 + Math.sin(t * 1.2) * 0.04;
@@ -332,11 +328,11 @@
       debugEl.innerHTML =
         '<b>DISH:</b> ' + dishId + '<br>' +
         '<b>FILE:</b> ' + dish.file + '<br>' +
+        '<b>STATIC:</b> ' + (dish.static ? 'YES' : 'NO') + '<br>' +
         '<b>PITCH:</b> ' + pitch.toFixed(1) + 'deg<br>' +
-        '<b>YAW:</b> ' + (yaw % 360).toFixed(1) + 'deg<br>' +
-        '<b>MAX_TILT:</b> +/-' + MAX_TILT_UP + 'deg';
+        '<b>YAW:</b> ' + (yaw % 360).toFixed(1) + 'deg';
     }, 50);
-    console.log('[Food3D v6] DEBUG ON', { dishId, dish, MAX_TILT_UP, ROT_SPEED_V });
+    console.log('[Food3D v7] DEBUG ON', { dishId, dish });
   }
 
   // ---------- 7. RESIZE ----------
