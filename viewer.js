@@ -244,8 +244,8 @@
   const ROT_SPEED_V   = 0.6;
   const SMOOTH        = 0.22;
   const FRICTION      = 0.93;
-  const MAX_TILT_UP   = 90;     // ⭐ étendu à 90° pour tuning
-  const MAX_TILT_DOWN = 90;
+  const MAX_TILT_UP   = 70;     // ⭐ étendu à 90° pour tuning
+  const MAX_TILT_DOWN = 70;
 
   let isDragging = false;
   let activePointerId = null;
