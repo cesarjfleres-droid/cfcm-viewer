@@ -38,7 +38,7 @@
     },
     'salade-homard': {
   file: 'salade.ply',
-  scale: 2400,
+  scale: 3200,                                    ← 2400 → 3200 (≈ +33%)
   lift: 400,
   euler: { x: -90, y: 0, z: 180 },
   trim:  { x: 0, y: 0, z: 0 },
