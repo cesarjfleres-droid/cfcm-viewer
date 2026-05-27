@@ -1,7 +1,7 @@
 /* Food3D · mobile camera-overlay viewer
- * v15 : Salade recalibrée (centre BBox + scale réduit)
+ * v16 : Salade — ajustements finaux scale + pitch
  *   - Tarte aux fraises : interactive, départ vue 3/4 appétissante
- *   - Salade homard : figée, recentrage BBox + dézoom
+ *   - Salade homard : figée, scale 2100, pitch -2°, yaw 13°
  *
  * CONVENTION SIGNES (validée debug v12) :
  *   PITCH négatif fort  = vue 3/4 inclinée (belle, appétissante)
@@ -46,16 +46,16 @@
     },
     'salade-homard': {
       file: 'salade.ply',
-      scale: 1800,
+      scale: 2100,
       lift: 400,
       euler: { x: -90, y: 0, z: 180 },
       trim:  { x: 0, y: 0, z: 0 },
-      // Recalibration v15 sur nouveau PLY (66588 verts)
-      // - centerLocal = centre bounding box (plus robuste que médiane sur objet asymétrique)
-      // - scale réduit 3200 → 1800 pour matcher la taille visuelle de la tarte
+      // Recalibration v16 :
+      // - scale 1800 → 2100 (+17% : un peu plus grand à l'écran)
+      // - defaultPitch -6.7 → -2 (un poil plus plat, vue plus zénithale)
       centerLocal: { x: 1.2075, y: 0.9820, z: 1.1778 },
-      defaultPitch: -6.7,
-      defaultYaw: 336.1,
+      defaultPitch: -2,
+      defaultYaw: 13,
       static: true
     },
   };
@@ -74,7 +74,7 @@
   if (!isNaN(urlLift))  dish.lift         = urlLift;
   if (urlFree)          dish.static       = false;
 
-  console.log('[Food3D v15] Loading dish:', dishId, '→', dish.file);
+  console.log('[Food3D v16] Loading dish:', dishId, '→', dish.file);
 
   // ---------- 1. CAMERA ----------
   let stream = null;
@@ -319,7 +319,7 @@
     canvas.addEventListener('pointerup',     onUp);
     canvas.addEventListener('pointercancel', onUp);
   } else {
-    console.log('[Food3D v15] STATIC mode for', dishId);
+    console.log('[Food3D v16] STATIC mode for', dishId);
     hint.style.display = 'none';
   }
 
