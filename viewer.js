@@ -1,12 +1,15 @@
 /* Food3D · mobile camera-overlay viewer
- * v25 — PRODUCTION FINALE
+ * v26 — PRODUCTION FINALE
  *
- * CHANGES vs v24 :
- *   - tarte-fraises : lift passé de -1800 à -4000 (descend encore d'un cran équivalent)
+ * CHANGES vs v25 :
+ *   - tarte-fraises : lift passé de -4000 à -2900 (juste milieu entre v24 trop haut et v25 trop bas)
  *   - salade-homard : INCHANGÉE
  *
+ * CHANGES v25 vs v24 :
+ *   - tarte-fraises : lift passé de -1800 à -4000 (trop bas)
+ *
  * CHANGES v24 vs v23 :
- *   - tarte-fraises : lift passé de 0 à -1800 (descente vers l'ombre)
+ *   - tarte-fraises : lift passé de 0 à -1800 (trop haut)
  *
  * CHANGES v23 vs v22 :
  *   - tarte-fraises : lift passé de 400 à 0 (1er essai, insuffisant)
@@ -57,8 +60,8 @@
     'tarte-fraises': {
       file: 'fraise.ply',
       scale: 2400,
-      // ⭐ v25 : lift descendu à -4000 (même delta que v22→v24, encore plus bas)
-      lift: -4000,
+      // ⭐ v26 : lift -2900 (juste milieu entre v24 -1800 trop haut et v25 -4000 trop bas)
+      lift: -2900,
       euler: { x: -90, y: 0, z: 180 },
       trim:  { x: 12, y: 0, z: 0 },
       centerLocal: { x: 0.1644, y: 0.5843, z: -1.5571 },
@@ -99,7 +102,7 @@
   if (!isNaN(urlLift))  dish.lift         = urlLift;
   if (urlFree)          dish.static       = false;
 
-  console.log('[Food3D v25] Loading dish:', dishId, '→', dish.file);
+  console.log('[Food3D v26] Loading dish:', dishId, '→', dish.file);
 
   // ---------- 1. CAMERA ----------
   let stream = null;
@@ -338,7 +341,7 @@
     canvas.addEventListener('pointerup',     onUp);
     canvas.addEventListener('pointercancel', onUp);
   } else {
-    console.log('[Food3D v25] STATIC mode for', dishId);
+    console.log('[Food3D v26] STATIC mode for', dishId);
     hint.style.display = 'none';
   }
 
