@@ -1,24 +1,17 @@
 /* Food3D · mobile camera-overlay viewer
- * v28 — PRODUCTION FINALE
+ * v29 — PRODUCTION FINALE
  *
- * CHANGES vs v27 :
- *   - tarte-fraises : lift passé de -1200 à -1600 (v27 trop bas, on remonte un peu)
- *   - salade-homard : INCHANGÉE
+ * CHANGES vs v28 :
+ *   - DIAGNOSTIC : `lift` ne bouge pas vraiment la tarte à l'écran (à cause de la rotation euler.x=-90,
+ *     l'axe Y monde devient axe Z local du modèle → ça avance/recule au lieu de descendre).
+ *   - FIX : `lift` remis à 400 (valeur d'origine v21).
+ *   - NOUVEAU paramètre `screenOffsetY` : translate le pivot en Y monde (vrai axe vertical écran).
+ *     Valeur négative = la tarte descend à l'écran.
+ *   - tarte-fraises : screenOffsetY = -1200 (descend la tarte de ~24% écran vers l'ombre jaune)
+ *   - salade-homard : screenOffsetY = 0 (INCHANGÉE)
  *
- * CHANGES v27 vs v26 :
- *   - tarte-fraises : lift passé de -2900 à -1200 (recalibrage après hors champ)
- *
- * CHANGES v26 vs v25 :
- *   - tarte-fraises : lift passé de -4000 à -2900 (juste milieu, mais hors champ)
- *
- * CHANGES v25 vs v24 :
- *   - tarte-fraises : lift passé de -1800 à -4000 (trop bas)
- *
- * CHANGES v24 vs v23 :
- *   - tarte-fraises : lift passé de 0 à -1800 (trop haut)
- *
- * CHANGES v23 vs v22 :
- *   - tarte-fraises : lift passé de 400 à 0 (1er essai, insuffisant)
+ * CHANGES v28 vs v22 (toutes les itérations de `lift` étaient des fausses pistes,
+ *   le résultat visuel changeait peu car `lift` ≠ axe vertical écran)
  *
  * CHANGES v22 vs v21 :
  *   - tarte-fraises : defaultPitch passé de -45 à +11 (démarre en vue top-down)
@@ -66,8 +59,9 @@
     'tarte-fraises': {
       file: 'fraise.ply',
       scale: 2400,
-      // ⭐ v28 : lift -1600 (entre v24 -1800 trop haut et v27 -1200 trop bas)
-      lift: -1600,
+      lift: 400,
+      // ⭐ v29 : screenOffsetY négatif → descend vraiment la tarte à l'écran (axe Y monde)
+      screenOffsetY: -1200,
       euler: { x: -90, y: 0, z: 180 },
       trim:  { x: 12, y: 0, z: 0 },
       centerLocal: { x: 0.1644, y: 0.5843, z: -1.5571 },
@@ -83,6 +77,8 @@
       file: 'salade.ply',
       scale: 2500,
       lift: 400,
+      // ⭐ v29 : pas de décalage écran pour la salade (INCHANGÉE)
+      screenOffsetY: 0,
       euler: { x: -90, y: 0, z: 180 },
       trim:  { x: 0, y: 0, z: 0 },
       // ✅ INCHANGÉ — calibration parfaite de l'utilisateur
@@ -101,14 +97,16 @@
   const urlPitch = parseFloat(urlParams.get('pitch'));
   const urlYaw   = parseFloat(urlParams.get('yaw'));
   const urlLift  = parseFloat(urlParams.get('lift'));
+  const urlOffsetY = parseFloat(urlParams.get('offsetY'));
   const urlFree  = urlParams.has('free');
 
-  if (!isNaN(urlPitch)) dish.defaultPitch = urlPitch;
-  if (!isNaN(urlYaw))   dish.defaultYaw   = urlYaw;
-  if (!isNaN(urlLift))  dish.lift         = urlLift;
-  if (urlFree)          dish.static       = false;
+  if (!isNaN(urlPitch))   dish.defaultPitch   = urlPitch;
+  if (!isNaN(urlYaw))     dish.defaultYaw     = urlYaw;
+  if (!isNaN(urlLift))    dish.lift           = urlLift;
+  if (!isNaN(urlOffsetY)) dish.screenOffsetY  = urlOffsetY;
+  if (urlFree)            dish.static         = false;
 
-  console.log('[Food3D v28] Loading dish:', dishId, '→', dish.file);
+  console.log('[Food3D v29] Loading dish:', dishId, '→', dish.file);
 
   // ---------- 1. CAMERA ----------
   let stream = null;
@@ -233,7 +231,9 @@
 
   const pivot = new pc.Entity('pivot');
   app.root.addChild(pivot);
-  pivot.setPosition(SPLAT_POS_X, SPLAT_POS_Y, SPLAT_POS_Z);
+  // ⭐ v29 : screenOffsetY translate le pivot en Y monde (vrai axe vertical écran)
+  const SCREEN_OFFSET_Y = (typeof dish.screenOffsetY === 'number') ? dish.screenOffsetY : 0;
+  pivot.setPosition(SPLAT_POS_X, SPLAT_POS_Y + SCREEN_OFFSET_Y, SPLAT_POS_Z);
 
   const splatEntity = new pc.Entity('splat');
   splatEntity.addComponent('gsplat', { asset: splatAsset });
@@ -347,7 +347,7 @@
     canvas.addEventListener('pointerup',     onUp);
     canvas.addEventListener('pointercancel', onUp);
   } else {
-    console.log('[Food3D v28] STATIC mode for', dishId);
+    console.log('[Food3D v29] STATIC mode for', dishId);
     hint.style.display = 'none';
   }
 
