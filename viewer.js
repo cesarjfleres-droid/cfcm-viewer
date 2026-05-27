@@ -1,11 +1,14 @@
 /* Food3D · mobile camera-overlay viewer
- * v22 — PRODUCTION FINALE
+ * v23 — PRODUCTION FINALE
  *
- * CHANGES vs v21 :
+ * CHANGES vs v22 :
+ *   - tarte-fraises : lift passé de 400 à 0 (descend la tarte vers le bas de l'écran)
+ *   - salade-homard : INCHANGÉE
+ *
+ * CHANGES v22 vs v21 :
  *   - tarte-fraises : defaultPitch passé de -45 à +11 (démarre en vue top-down)
  *   - tarte-fraises : pitchMax passé de -15 à +15 (permet vue plate complète)
  *   - tarte-fraises : yawMin/yawMax restaurés à -45/+40 (comme v19)
- *   - salade-homard : INCHANGÉE
  *
  * CATALOGUE :
  *   - tarte-fraises : interactive, vue top-down au démarrage
@@ -48,7 +51,8 @@
     'tarte-fraises': {
       file: 'fraise.ply',
       scale: 2400,
-      lift: 400,
+      // ⭐ v23 : lift descendu de 400 → 0 pour positionner la tarte vers le bas
+      lift: 0,
       euler: { x: -90, y: 0, z: 180 },
       trim:  { x: 12, y: 0, z: 0 },
       centerLocal: { x: 0.1644, y: 0.5843, z: -1.5571 },
@@ -89,7 +93,7 @@
   if (!isNaN(urlLift))  dish.lift         = urlLift;
   if (urlFree)          dish.static       = false;
 
-  console.log('[Food3D v22] Loading dish:', dishId, '→', dish.file);
+  console.log('[Food3D v23] Loading dish:', dishId, '→', dish.file);
 
   // ---------- 1. CAMERA ----------
   let stream = null;
@@ -328,7 +332,7 @@
     canvas.addEventListener('pointerup',     onUp);
     canvas.addEventListener('pointercancel', onUp);
   } else {
-    console.log('[Food3D v22] STATIC mode for', dishId);
+    console.log('[Food3D v23] STATIC mode for', dishId);
     hint.style.display = 'none';
   }
 
