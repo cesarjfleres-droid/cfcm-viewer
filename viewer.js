@@ -1,9 +1,12 @@
 /* Food3D · mobile camera-overlay viewer
- * v26 — PRODUCTION FINALE
+ * v27 — PRODUCTION FINALE
  *
- * CHANGES vs v25 :
- *   - tarte-fraises : lift passé de -4000 à -2900 (juste milieu entre v24 trop haut et v25 trop bas)
+ * CHANGES vs v26 :
+ *   - tarte-fraises : lift passé de -2900 à -1200 (v26 hors champ, on recalibre)
  *   - salade-homard : INCHANGÉE
+ *
+ * CHANGES v26 vs v25 :
+ *   - tarte-fraises : lift passé de -4000 à -2900 (juste milieu, mais hors champ)
  *
  * CHANGES v25 vs v24 :
  *   - tarte-fraises : lift passé de -1800 à -4000 (trop bas)
@@ -60,8 +63,8 @@
     'tarte-fraises': {
       file: 'fraise.ply',
       scale: 2400,
-      // ⭐ v26 : lift -2900 (juste milieu entre v24 -1800 trop haut et v25 -4000 trop bas)
-      lift: -2900,
+      // ⭐ v27 : lift -1200 (recalibrage après v26 -2900 hors champ)
+      lift: -1200,
       euler: { x: -90, y: 0, z: 180 },
       trim:  { x: 12, y: 0, z: 0 },
       centerLocal: { x: 0.1644, y: 0.5843, z: -1.5571 },
@@ -102,7 +105,7 @@
   if (!isNaN(urlLift))  dish.lift         = urlLift;
   if (urlFree)          dish.static       = false;
 
-  console.log('[Food3D v26] Loading dish:', dishId, '→', dish.file);
+  console.log('[Food3D v27] Loading dish:', dishId, '→', dish.file);
 
   // ---------- 1. CAMERA ----------
   let stream = null;
@@ -341,7 +344,7 @@
     canvas.addEventListener('pointerup',     onUp);
     canvas.addEventListener('pointercancel', onUp);
   } else {
-    console.log('[Food3D v26] STATIC mode for', dishId);
+    console.log('[Food3D v27] STATIC mode for', dishId);
     hint.style.display = 'none';
   }
 
