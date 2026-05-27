@@ -1,9 +1,14 @@
 /* =================================================================
    CF&CM — Carte numérique La Maison Auberge
-   Version : 2.1 — 2 PLATS ACTIFS EN 3D (fraise + salade homard)
+   Version : 2.2 — Cache-buster automatique pour le viewer 3D
    ================================================================= */
 
-/* ⚙️  Viewer 3D local */
+/* ⚙️  Viewer 3D local
+ * VIEWER_VERSION : à bumper UNIQUEMENT après un changement majeur de viewer.js
+ * Cache-buster automatique : préfixe horaire pour forcer le rafraîchissement
+ * sur iOS Safari qui agresse le cache des sous-pages.
+ */
+const VIEWER_VERSION = '19';
 const VIEWER_URL = 'viewer.html';
 
 /* 📋  Données du menu — Modifier 'active: true/false' pour activer un plat */
@@ -83,6 +88,20 @@ const ICON_LOCK = `
 
 /* 🛠  Helpers */
 function formatPrice(price) { return price + ' €'; }
+
+/**
+ * Construit l'URL vers le viewer 3D avec cache-buster.
+ * - VIEWER_VERSION : invalide le cache à chaque déploiement
+ * - Date.now()     : invalide le cache à chaque session (iOS Safari aggressif)
+ */
+function buildViewerUrl(dishId) {
+  const params = new URLSearchParams({
+    dish: dishId,
+    v: VIEWER_VERSION,
+    t: Date.now().toString(36)
+  });
+  return `${VIEWER_URL}?${params.toString()}`;
+}
 
 function renderDish(dish, globalIndex) {
   const isActive = dish.active === true;
@@ -165,7 +184,7 @@ function init() {
       btn.addEventListener('click', handleView3D);
     });
 
-    console.log(`[CF&CM] Menu chargé : ${globalIndex} plats, ${activeButtons.length} actif(s) en 3D`);
+    console.log(`[CF&CM v2.2] Menu chargé : ${globalIndex} plats, ${activeButtons.length} actif(s) en 3D · viewer v${VIEWER_VERSION}`);
   } catch (err) {
     console.error('[CF&CM] Erreur init :', err);
   }
@@ -194,8 +213,8 @@ function handleView3D(event) {
   try {
     const btn = event.currentTarget;
     const dishId = btn.getAttribute('data-dish');
-    const separator = VIEWER_URL.includes('?') ? '&' : '?';
-    const target = `${VIEWER_URL}${separator}dish=${encodeURIComponent(dishId)}`;
+    const target = buildViewerUrl(dishId);
+    console.log('[CF&CM] Redirection vers :', target);
     btn.style.transform = 'scale(0.97)';
     setTimeout(() => { window.location.href = target; }, 150);
   } catch (err) {
