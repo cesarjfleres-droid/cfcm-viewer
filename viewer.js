@@ -1,8 +1,19 @@
 /* Food3D · mobile camera-overlay viewer
- * v18 : Limites par plat (architecture)
- *   - Chaque plat définit ses propres limits dans DISH_CATALOG
- *   - Tarte : limites strictes (zone "belle vue 3/4")
- *   - Salade : libres (mode calibration libre 360°)
+ * v19 — PRODUCTION FINALE
+ *
+ * CATALOGUE :
+ *   - tarte-fraises : interactive, limites strictes "belle vue 3/4"
+ *     PITCH ∈ [-55°, -30°] · YAW ∈ [-45°, 40°]
+ *     Départ : pitch -45°, yaw 0°
+ *
+ *   - salade-homard : FIGÉE (static)
+ *     Angle calibré : pitch -180°, yaw -177.3°
+ *     Scale 2500
+ *
+ * ARCHITECTURE :
+ *   - Limites de rotation définies par plat (DISH_CATALOG.limits)
+ *   - URL params : ?dish=<id> ?debug ?free ?pitch=X ?yaw=Y ?lift=N
+ */
  *
  * CONVENTION SIGNES (validée debug v12) :
  *   PITCH négatif fort  = vue 3/4 inclinée (belle, appétissante)
@@ -53,13 +64,14 @@
       lift: 400,
       euler: { x: -90, y: 0, z: 180 },
       trim:  { x: 0, y: 0, z: 0 },
-      // ⚠️ MODE CALIBRATION v18 :
-      // Aucune limite → l'utilisateur tourne librement dans tous les sens
-      // pour trouver l'angle parfait. À figer en static: true ensuite.
+      // ✅ v19 PRODUCTION FINALE
+      // Angle figé calibré par l'utilisateur (capture 02:24)
+      // PITCH = -180°, YAW = -177.3°, scale = 2500
       centerLocal: { x: 1.2075, y: 0.9820, z: 1.1778 },
-      defaultPitch: -2,
-      defaultYaw: 13,
-      static: false,
+      defaultPitch: -180,
+      defaultYaw: -177.3,
+      static: true,
+      // limits inutilisé car static, mais conservé pour cohérence d'API
       limits: { pitchMin: -180, pitchMax: 180, yawMin: -180, yawMax: 180 }
     },
   };
@@ -78,7 +90,7 @@
   if (!isNaN(urlLift))  dish.lift         = urlLift;
   if (urlFree)          dish.static       = false;
 
-  console.log('[Food3D v18] Loading dish:', dishId, '→', dish.file);
+  console.log('[Food3D v19] Loading dish:', dishId, '→', dish.file);
 
   // ---------- 1. CAMERA ----------
   let stream = null;
@@ -321,7 +333,7 @@
     canvas.addEventListener('pointerup',     onUp);
     canvas.addEventListener('pointercancel', onUp);
   } else {
-    console.log('[Food3D v18] STATIC mode for', dishId);
+    console.log('[Food3D v19] STATIC mode for', dishId);
     hint.style.display = 'none';
   }
 
