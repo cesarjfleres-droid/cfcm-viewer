@@ -13,7 +13,6 @@
  * ARCHITECTURE :
  *   - Limites de rotation définies par plat (DISH_CATALOG.limits)
  *   - URL params : ?dish=<id> ?debug ?free ?pitch=X ?yaw=Y ?lift=N
- */
  *
  * CONVENTION SIGNES (validée debug v12) :
  *   PITCH négatif fort  = vue 3/4 inclinée (belle, appétissante)
