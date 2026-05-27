@@ -1,25 +1,17 @@
 /* Food3D · mobile camera-overlay viewer
- * v19 — PRODUCTION FINALE
+ * v20 — PRODUCTION FINALE
  *
- * CATALOGUE :
- *   - tarte-fraises : interactive, limites strictes "belle vue 3/4"
- *     PITCH ∈ [-55°, -30°] · YAW ∈ [-45°, 40°]
- *     Départ : pitch -45°, yaw 0°
+ * CHANGES vs v19 :
+ *   - tarte-fraises : vue par défaut un peu moins inclinée (-35° au lieu de -45°)
+ *   - tarte-fraises : rotation horizontale 360° libre (yaw illimité)
+ *   - tarte-fraises : range pitch élargie [-55°, -15°]
+ *   - salade-homard : INCHANGÉE (figée à -180° / -177.3°, scale 2500)
  *
- *   - salade-homard : FIGÉE (static)
- *     Angle calibré : pitch -180°, yaw -177.3°
- *     Scale 2500
- *
- * ARCHITECTURE :
- *   - Limites de rotation définies par plat (DISH_CATALOG.limits)
- *   - URL params : ?dish=<id> ?debug ?free ?pitch=X ?yaw=Y ?lift=N
- *
- * CONVENTION SIGNES (validée debug v12) :
- *   PITCH négatif fort  = vue 3/4 inclinée (belle, appétissante)
- *   PITCH proche de 0   = vue du dessus aplatie (moche)
- *   PITCH positif       = on voit le dessous (interdit)
- *   YAW négatif         = rotation gauche
- *   YAW positif         = rotation droite
+ * CONVENTION SIGNES :
+ *   PITCH négatif fort = vue 3/4 inclinée
+ *   PITCH proche de 0  = vue du dessus
+ *   YAW négatif        = rotation gauche
+ *   YAW positif        = rotation droite
  */
 (async function main() {
   const $ = (id) => document.getElementById(id);
@@ -50,12 +42,12 @@
       euler: { x: -90, y: 0, z: 180 },
       trim:  { x: 12, y: 0, z: 0 },
       centerLocal: { x: 0.1644, y: 0.5843, z: -1.5571 },
-      // Vue 3/4 appétissante au démarrage (au lieu de vue du dessus aplatie)
-      defaultPitch: -45,
+      // ⭐ v20 : vue un peu moins inclinée + rotation 360°
+      defaultPitch: -35,
       defaultYaw: 0,
       static: false,
-      // Limites de rotation strictes pour la tarte (zone "belle vue")
-      limits: { pitchMin: -55, pitchMax: -30, yawMin: -45, yawMax: 40 }
+      // pitch limité pour rester dans la "belle zone", yaw libre 360°
+      limits: { pitchMin: -55, pitchMax: -15, yawMin: -3600, yawMax: 3600 }
     },
     'salade-homard': {
       file: 'salade.ply',
@@ -63,14 +55,11 @@
       lift: 400,
       euler: { x: -90, y: 0, z: 180 },
       trim:  { x: 0, y: 0, z: 0 },
-      // ✅ v19 PRODUCTION FINALE
-      // Angle figé calibré par l'utilisateur (capture 02:24)
-      // PITCH = -180°, YAW = -177.3°, scale = 2500
+      // ✅ INCHANGÉ depuis v19 — calibration parfaite
       centerLocal: { x: 1.2075, y: 0.9820, z: 1.1778 },
       defaultPitch: -180,
       defaultYaw: -177.3,
       static: true,
-      // limits inutilisé car static, mais conservé pour cohérence d'API
       limits: { pitchMin: -180, pitchMax: 180, yawMin: -180, yawMax: 180 }
     },
   };
@@ -89,7 +78,7 @@
   if (!isNaN(urlLift))  dish.lift         = urlLift;
   if (urlFree)          dish.static       = false;
 
-  console.log('[Food3D v19] Loading dish:', dishId, '→', dish.file);
+  console.log('[Food3D v20] Loading dish:', dishId, '→', dish.file);
 
   // ---------- 1. CAMERA ----------
   let stream = null;
@@ -261,17 +250,13 @@
   setProgress(98);
 
   // ============================================================
-  //   CONTRÔLES — LIMITES PAR PLAT v18
-  //   Chaque plat définit ses propres limites dans DISH_CATALOG.limits
-  //   - Tarte : zone restreinte "belle vue 3/4"
-  //   - Salade : libre (mode calibration)
+  //   CONTRÔLES — LIMITES PAR PLAT
   // ============================================================
   const ROT_SPEED_H   = 0.4;
   const ROT_SPEED_V   = 0.6;
   const SMOOTH        = 0.22;
   const FRICTION      = 0.93;
 
-  // Limites par plat (fallback large si non défini)
   const DEFAULT_LIMITS = { pitchMin: -180, pitchMax: 180, yawMin: -180, yawMax: 180 };
   const limits = dish.limits || DEFAULT_LIMITS;
   const PITCH_MIN = limits.pitchMin;
@@ -284,7 +269,7 @@
   let lastX = 0, lastY = 0;
   let velYaw = 0, velPitch = 0;
   let targetYaw   = dish.defaultYaw   || 0;
-  let targetPitch = dish.defaultPitch || -45;
+  let targetPitch = dish.defaultPitch || -35;
   let yaw   = targetYaw;
   let pitch = targetPitch;
   let userInteracted = false;
@@ -332,7 +317,7 @@
     canvas.addEventListener('pointerup',     onUp);
     canvas.addEventListener('pointercancel', onUp);
   } else {
-    console.log('[Food3D v19] STATIC mode for', dishId);
+    console.log('[Food3D v20] STATIC mode for', dishId);
     hint.style.display = 'none';
   }
 
@@ -367,19 +352,13 @@
     debugEl.style.cssText = 'position:fixed;top:10px;left:10px;z-index:99999;background:rgba(0,0,0,0.9);color:#0f0;font:bold 16px monospace;padding:12px 16px;border-radius:10px;pointer-events:none;line-height:1.5;border:2px solid #0f0;';
     document.body.appendChild(debugEl);
     setInterval(() => {
-      const hasLimits = PITCH_MAX < 180;
-      let pitchArrow;
-      if (hasLimits) {
-        pitchArrow = pitch > PITCH_MAX - 1 ? '⚠️ TROP PLAT' : (pitch < PITCH_MIN + 1 ? '⚠️ TROP INCLINÉ' : '✅');
-      } else {
-        pitchArrow = pitch > 1 ? '⬇️ BAS' : (pitch < -1 ? '⬆️ HAUT' : '·');
-      }
+      const pitchArrow = pitch > PITCH_MAX - 1 ? '⚠️ MAX BAS' : (pitch < PITCH_MIN + 1 ? '⚠️ MAX HAUT' : '✅');
       const yawArrow   = yaw   > 1 ? '➡️ DROITE' : (yaw   < -1 ? '⬅️ GAUCHE' : '·');
       debugEl.innerHTML =
         '<span style="color:#ff0">PITCH: ' + pitch.toFixed(1) + '° ' + pitchArrow + '</span><br>' +
         '<span style="color:#ff0">YAW: ' + yaw.toFixed(1) + '° ' + yawArrow + '</span><br>' +
         '<span style="font-size:11px;color:#0a0">DISH: ' + dishId + '</span><br>' +
-        '<span style="font-size:11px;color:#0a0">' + (hasLimits ? 'PITCH ∈ [' + PITCH_MIN + ', ' + PITCH_MAX + '] · YAW ∈ [' + YAW_MIN + ', ' + YAW_MAX + ']' : '🔓 LIBRE (mode calibration)') + '</span>';
+        '<span style="font-size:11px;color:#0a0">PITCH ∈ [' + PITCH_MIN + ', ' + PITCH_MAX + '] · YAW 360°</span>';
     }, 50);
   }
 
