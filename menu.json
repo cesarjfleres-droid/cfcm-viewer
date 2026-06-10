@@ -1,0 +1,440 @@
+{
+  "restaurant": {
+    "name": "Baia Bella",
+    "location": "Plage de la Petite Afrique · Beaulieu-sur-Mer",
+    "tagline": "Cuisine méditerranéenne au charbon de bois",
+    "phone": "+33 4 93 01 11 00",
+    "website": "https://www.baiabella.com",
+    "instagram": "https://www.instagram.com/baiabellaplage/",
+    "footnote": "Taxes et service compris, prix en euros TTC. Chèques non acceptés. Le registre des allergènes contenus dans nos plats est disponible à votre demande auprès de nos serveurs."
+  },
+  "categories": [
+    { "id": "a_partager", "name": "À partager", "subtitle": "Pour commencer, au centre de la table" },
+    { "id": "salades", "name": "Salades", "subtitle": "Fraîcheur du marché" },
+    { "id": "pizzas", "name": "Pizzas", "subtitle": "Nous réalisons nos pâtes à pizza, recette authentique de Luigi Vannini" },
+    { "id": "pates", "name": "Pâtes", "subtitle": "Nos pâtes fraîches sont réalisées quotidiennement et artisanalement" },
+    { "id": "poissons", "name": "Poissons grillés au charbon de bois", "subtitle": "La mer, le feu de bois" },
+    { "id": "peche_arrivage", "name": "La pêche selon arrivage", "subtitle": "Les poissons de plus de deux personnes sont vendus au poids — prix pour 100 g" },
+    { "id": "viandes", "name": "Viandes grillées au charbon de bois", "subtitle": "À la braise" },
+    { "id": "menu_enfant", "name": "Menu enfant", "subtitle": "Jusqu'à 11 ans" }
+  ],
+  "dishes": [
+    {
+      "id": "pimientos_de_padron",
+      "name": "Pimientos de Padrón",
+      "description": "Petits poivrons verts frits à l'huile d'olive.",
+      "description_en": "Small green peppers fried in olive oil.",
+      "price": 15.0,
+      "category": "a_partager",
+      "vegetarian": true,
+      "gluten_free": true,
+      "model3d": null
+    },
+    {
+      "id": "barbajuan_sauce_tomate",
+      "name": "Barbajuan sauce tomate",
+      "description": "Raviolis frits farcis à la blette et fromage.",
+      "description_en": "Barbajuan with tomato sauce: fried ravioli stuffed with Swiss chard and cheese.",
+      "price": 17.0,
+      "category": "a_partager",
+      "vegetarian": true,
+      "gluten_free": false,
+      "model3d": null
+    },
+    {
+      "id": "ktipiti",
+      "name": "Ktipiti",
+      "description": "Crème de poivrons grillés, fromage fêta, yaourt, huile d'olive, menthe fraîche et pain comme une pita.",
+      "description_en": "Cream of grilled peppers mixed with feta cheese, yogurt, olive oil, mint and bread like a pita.",
+      "price": 16.0,
+      "category": "a_partager",
+      "vegetarian": true,
+      "gluten_free": false,
+      "model3d": null
+    },
+    {
+      "id": "stracciatella_cremeuse",
+      "name": "Stracciatella crémeuse",
+      "description": "Le cœur de mozzarella crémeuse, tomates colorées, basilic frais et charbon végétal.",
+      "description_en": "Creamy mozzarella heart stracciatella, colorful tomatoes, fresh basil and vegetal coal.",
+      "price": 21.5,
+      "category": "a_partager",
+      "vegetarian": true,
+      "gluten_free": true,
+      "model3d": null
+    },
+    {
+      "id": "poelee_de_coquillages",
+      "name": "Poêlée de coquillages",
+      "description": "Palourdes et moules au vin blanc, persillade.",
+      "description_en": "Pan-fried shellfish: clams and mussels in white wine sauce, garlic parsley oil.",
+      "price": 23.5,
+      "category": "a_partager",
+      "vegetarian": false,
+      "gluten_free": true,
+      "model3d": null
+    },
+    {
+      "id": "ceviche_paloma",
+      "name": "Ceviche Paloma",
+      "description": "Daurade marinée aux agrumes et pickles de légumes.",
+      "description_en": "Sea-bream ceviche, vegetables pickles and citrus marinade.",
+      "price": 28.0,
+      "category": "a_partager",
+      "vegetarian": false,
+      "gluten_free": true,
+      "model3d": null
+    },
+
+    {
+      "id": "la_baia",
+      "name": "La Baia",
+      "description": "Pastèque, fromage fêta, tomate, melon, roquette, trait de balsamique, menthe fraîche.",
+      "description_en": "Watermelon, feta cheese, tomato, melon, arugula, balsamic and fresh mint.",
+      "price": 25.0,
+      "category": "salades",
+      "vegetarian": true,
+      "gluten_free": true,
+      "model3d": "https://pub-cb6130d8c47d41edaef19f32291a50d2.r2.dev/models/plat1.ply",
+      "viewer": {
+        "rotation": [0, 0, 90],
+        "center": [-5.478, -0.911, -0.463],
+        "yaw": 25,
+        "pitch": -28,
+        "distance": 1.45,
+        "minDistance": 0.7,
+        "maxDistance": 2.6,
+        "minPitch": -80,
+        "maxPitch": -5,
+        "fov": 40,
+        "targetHeight": 0.02,
+        "autoRotateSpeed": 6
+      }
+    },
+    {
+      "id": "traditionnelle_artichaut",
+      "name": "La traditionnelle d'artichaut",
+      "description": "Artichauts frais coupés finement, roquette, copeaux de parmesan, sauce ancholade légère.",
+      "description_en": "Finely chopped fresh artichokes, arugula, parmesan shavings, light anchovy sauce.",
+      "price": 23.0,
+      "category": "salades",
+      "vegetarian": false,
+      "gluten_free": true,
+      "model3d": null
+    },
+    {
+      "id": "autre_caesar",
+      "name": "L'autre caesar",
+      "description": "Crevettes marinées, salade romaine, sauce caesar, noisettes torréfiées, copeaux de parmesan, tomates cerises, petits croûtons.",
+      "description_en": "Marinaded shrimps, romaine salad, caesar sauce, roasted hazelnuts, parmesan shavings, cherry tomatoes, croutons.",
+      "price": 27.5,
+      "category": "salades",
+      "vegetarian": false,
+      "gluten_free": false,
+      "model3d": null
+    },
+    {
+      "id": "pause_vegan",
+      "name": "La pause vegan",
+      "description": "Jeunes pousses d'épinard, avocat, pois chiches, betteraves crues, mélange de graines, houmous, grenade, sauce soja cacahuète.",
+      "description_en": "Baby spinach, avocado, chickpeas, raw beets, mixed seeds, hummus, pomegranate, peanut soy sauce.",
+      "price": 24.0,
+      "category": "salades",
+      "vegetarian": true,
+      "gluten_free": true,
+      "model3d": null
+    },
+    {
+      "id": "salade_crottin_chavignol",
+      "name": "Salade crottin de Chavignol & copeaux de truffes d'été",
+      "description": "Tuber aestivum, asperges vertes, artichauts crus, roquette, ancholade légère.",
+      "description_en": "Chavignol goat cheese salad, green asparagus, artichokes, arugula, light anchovy sauce, « Tuber aestivum » truffle shavings.",
+      "price": 28.5,
+      "category": "salades",
+      "vegetarian": false,
+      "gluten_free": false,
+      "model3d": null
+    },
+
+    {
+      "id": "authentique_margarita",
+      "name": "Authentique Margarita",
+      "description": "Sauce tomate, mozzarella di Bufala, feuilles de basilic frais.",
+      "description_en": "Tomato sauce, Bufala mozzarella and basil leaves.",
+      "price": 19.0,
+      "category": "pizzas",
+      "vegetarian": true,
+      "gluten_free": false,
+      "model3d": null
+    },
+    {
+      "id": "gamberoni",
+      "name": "Gamberoni",
+      "description": "Sauce tomate, mozzarella di Bufala, crevettes, persillade.",
+      "description_en": "Tomato sauce, Bufala mozzarella, shrimps, garlic parsley oil.",
+      "price": 26.0,
+      "category": "pizzas",
+      "vegetarian": false,
+      "gluten_free": false,
+      "model3d": null
+    },
+    {
+      "id": "picante",
+      "name": "Picante",
+      "description": "Sauce tomate, mozzarella, cantal, salami piquant, oignons rouges crus, poivrons rouges grillés.",
+      "description_en": "Tomato sauce, mozzarella, cantal, spicy salami, raw red onions, grilled red peppers.",
+      "price": 21.0,
+      "category": "pizzas",
+      "vegetarian": false,
+      "gluten_free": false,
+      "model3d": null
+    },
+    {
+      "id": "fresca",
+      "name": "Fresca",
+      "description": "Pâte blanche garnie à la sortie du four de tomates fraîches de couleur, jambon cru et mozzarella stracciatella.",
+      "description_en": "White pizza topped out of the oven with fresh colored tomatoes, prosciutto and mozzarella stracciatella.",
+      "price": 24.0,
+      "category": "pizzas",
+      "vegetarian": false,
+      "gluten_free": false,
+      "model3d": "https://pub-cb6130d8c47d41edaef19f32291a50d2.r2.dev/models/plat3.ply",
+      "viewer": {
+        "rotation": [0, 0, 0],
+        "center": [-0.028, -1.308, -0.09],
+        "yaw": 15,
+        "pitch": -35,
+        "distance": 1.45,
+        "minDistance": 0.7,
+        "maxDistance": 2.6,
+        "minPitch": -80,
+        "maxPitch": -5,
+        "fov": 40,
+        "targetHeight": 0.0,
+        "autoRotateSpeed": 6
+      }
+    },
+    {
+      "id": "berlugane_love",
+      "name": "Berlugane love",
+      "description": "Pâte blanche, mozzarella, cantal, aubergines confites, artichauts frais, garnie à la sortie du four de noisettes torréfiées, ricotta et basilic frais.",
+      "description_en": "White pizza, mozzarella, cantal, eggplant confit, fresh artichokes, garnished out of the oven with roasted hazelnuts, ricotta and fresh basil.",
+      "price": 22.0,
+      "category": "pizzas",
+      "vegetarian": true,
+      "gluten_free": false,
+      "model3d": null
+    },
+    {
+      "id": "tartufa",
+      "name": "Tartufa",
+      "description": "Pâte blanche, mozzarella, cantal, garnie à la sortie du four de salade roquette et lamelles de truffe d'été Tuber Aestivum.",
+      "description_en": "White pizza, mozzarella, cantal, garnished straight of the oven with arugula and slices of Tuber Aestivum summer truffle.",
+      "price": 27.0,
+      "category": "pizzas",
+      "vegetarian": true,
+      "gluten_free": false,
+      "model3d": null
+    },
+
+    {
+      "id": "gnocchi_sorrentina",
+      "name": "Gnocchi frais alla Sorrentina",
+      "description": "Gnocchi, sauce tomate maison, cœur de stracciatella onctueuse.",
+      "description_en": "Gnocchi, homemade tomato sauce, creamy stracciatella heart.",
+      "price": 23.5,
+      "category": "pates",
+      "vegetarian": true,
+      "gluten_free": false,
+      "model3d": null
+    },
+    {
+      "id": "rigatoni_truffe",
+      "name": "Rigatoni frais à la truffe",
+      "description": "Rigatoni à la crème de truffe et copeaux de truffes d'été Tuber Aestivum.",
+      "description_en": "Rigatoni with truffle cream and Tuber Aestivum summer truffle shavings.",
+      "price": 27.0,
+      "category": "pates",
+      "vegetarian": true,
+      "gluten_free": false,
+      "model3d": null
+    },
+    {
+      "id": "linguini_coquillages",
+      "name": "Linguini aux coquillages",
+      "description": "Linguini aux palourdes et aux moules, persillade et neige de poutargue.",
+      "description_en": "Linguini with clams and mussels, garlic parsley oil and bottarga fish row sprinkle.",
+      "price": 28.0,
+      "category": "pates",
+      "vegetarian": false,
+      "gluten_free": false,
+      "model3d": null
+    },
+    {
+      "id": "pates_langouste",
+      "name": "Pâtes à la langouste",
+      "description": "Pâtes à la crème, bisque de langouste et queue de langouste.",
+      "description_en": "Pasta with lobster bisque & lobster tail.",
+      "price": 56.0,
+      "category": "pates",
+      "vegetarian": false,
+      "gluten_free": false,
+      "model3d": null
+    },
+
+    {
+      "id": "daurade_deux_pesto",
+      "name": "Daurade aux deux pesto façon Baia Bella",
+      "description": "Cuite au charbon de bois, ouverte en portefeuille avec duo de pesto rouge et de pesto vert, légumes grillés et salade d'herbes folles.",
+      "description_en": "Whole sea bream grilled over the wood fire, opened and prepared with two types of pesto, served with grilled vegetables and fresh herbs salad.",
+      "price": 40.0,
+      "category": "poissons",
+      "vegetarian": false,
+      "gluten_free": true,
+      "model3d": null
+    },
+    {
+      "id": "loup_grille_entier",
+      "name": "Loup grillé entier cuit au charbon de bois",
+      "description": "Pour deux personnes, pomme de terre en robe des champs et légumes grillés.",
+      "description_en": "Grilled whole sea bass over the wood fire for two, served with jacket potato and grilled vegetables.",
+      "price": 49.0,
+      "price_note": "/ pers",
+      "category": "poissons",
+      "vegetarian": false,
+      "gluten_free": true,
+      "model3d": null
+    },
+    {
+      "id": "scampis_sauvages_rotis",
+      "name": "Scampis sauvages rôtis",
+      "description": "Cuits au four, pomme de terre en robe des champs et légumes grillés.",
+      "description_en": "Scampies cooked in the oven and served with jacket potato and grilled vegetables.",
+      "price": 39.5,
+      "category": "poissons",
+      "vegetarian": false,
+      "gluten_free": true,
+      "model3d": "https://pub-cb6130d8c47d41edaef19f32291a50d2.r2.dev/models/plat2.ply",
+      "viewer": {
+        "rotation": [180, 0, 0],
+        "center": [0.983, -0.406, -0.155],
+        "yaw": -20,
+        "pitch": -30,
+        "distance": 1.5,
+        "minDistance": 0.75,
+        "maxDistance": 2.7,
+        "minPitch": -80,
+        "maxPitch": -5,
+        "fov": 40,
+        "targetHeight": 0.0,
+        "autoRotateSpeed": 6
+      }
+    },
+    {
+      "id": "filet_de_rascasse",
+      "name": "Filet de rascasse",
+      "description": "Cuit à la plancha, purée de petits pois froide, salade d'herbes folles et huile au paprika fumé.",
+      "description_en": "Seared red scorpionfish fillet, chilled green peas purée, wild herb salad and smoked paprika oil.",
+      "price": 35.0,
+      "category": "poissons",
+      "vegetarian": false,
+      "gluten_free": true,
+      "model3d": null
+    },
+
+    {
+      "id": "peche_loup",
+      "name": "Loup · Sea bass",
+      "description": "Pêche selon arrivage, vendu au poids.",
+      "description_en": "Fish for more than 2 people are sold by weight — price by weight, per 100 g.",
+      "price": 12.0,
+      "price_note": "/ 100 g",
+      "category": "peche_arrivage",
+      "vegetarian": false,
+      "gluten_free": true,
+      "model3d": null
+    },
+    {
+      "id": "peche_chapon",
+      "name": "Chapon · Scorpion fish",
+      "description": "Pêche selon arrivage, vendu au poids.",
+      "description_en": "Fish for more than 2 people are sold by weight — price by weight, per 100 g.",
+      "price": 15.0,
+      "price_note": "/ 100 g",
+      "category": "peche_arrivage",
+      "vegetarian": false,
+      "gluten_free": true,
+      "model3d": null
+    },
+    {
+      "id": "peche_daurade_royale",
+      "name": "Daurade Royale · Royal Seabream",
+      "description": "Pêche selon arrivage, vendu au poids.",
+      "description_en": "Fish for more than 2 people are sold by weight — price by weight, per 100 g.",
+      "price": 12.0,
+      "price_note": "/ 100 g",
+      "category": "peche_arrivage",
+      "vegetarian": false,
+      "gluten_free": true,
+      "model3d": null
+    },
+
+    {
+      "id": "tartare_boeuf",
+      "name": "Tartare de bœuf traditionnel",
+      "description": "Pommes de terre et salade.",
+      "description_en": "Raw beef tartare with potatoes and salad.",
+      "price": 28.0,
+      "category": "viandes",
+      "vegetarian": false,
+      "gluten_free": true,
+      "model3d": null
+    },
+    {
+      "id": "filet_boeuf_braise",
+      "name": "Filet de bœuf à la braise",
+      "description": "Origine France, jus court au romarin, légumes grillés et panisses artisanales.",
+      "description_en": "Grilled beef sirloin over a wood fire (250 g approx), France, rosemary juice, served with grilled vegetables and panisses: local chickpea fries.",
+      "price": 45.0,
+      "category": "viandes",
+      "vegetarian": false,
+      "gluten_free": false,
+      "model3d": null
+    },
+    {
+      "id": "demi_coquelet_braise",
+      "name": "Demi-coquelet à la braise",
+      "description": "Marinade au chimichurri rouge, pomme de terre en robe des champs, légumes grillés.",
+      "description_en": "Grilled chicken cooked over the wood fire, marinade with red chimichurri, jacket potato, grilled vegetables.",
+      "price": 29.5,
+      "category": "viandes",
+      "vegetarian": false,
+      "gluten_free": false,
+      "model3d": null
+    },
+    {
+      "id": "tomahawk_boeuf",
+      "name": "Tomahawk de bœuf",
+      "description": "Environ 1,3 kg, pour 2 ou 3 personnes, cuit à la braise. Pomme de terre en robe des champs et légumes grillés.",
+      "description_en": "Beef Tomahawk cooked over the wood fire, served with jacket potato and grilled vegetables. For 2 or 3 people.",
+      "price": 165.0,
+      "price_note": "2–3 pers",
+      "category": "viandes",
+      "vegetarian": false,
+      "gluten_free": true,
+      "model3d": null
+    },
+
+    {
+      "id": "menu_enfant",
+      "name": "Menu enfant",
+      "description": "Steak haché, frites et légumes — ou — Mini pizza marguerite sauce tomate, mozzarella, cantal — et — une boule de glace au choix pour les plus sages.",
+      "description_en": "Burger patty, fries and vegetables — or — Mini margarita pizza, tomato sauce, mozzarella, cantal — and — a scoop of ice cream of your choice.",
+      "price": 16.0,
+      "category": "menu_enfant",
+      "vegetarian": false,
+      "gluten_free": false,
+      "model3d": null
+    }
+  ]
+}
