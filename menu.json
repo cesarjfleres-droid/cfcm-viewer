@@ -95,7 +95,7 @@
       "category": "salades",
       "vegetarian": true,
       "gluten_free": true,
-      "model3d": "models/plat1.ply",
+      "model3d": "https://pub-cb6130d8c47d41edaef19f32291a50d2.r2.dev/models/plat1.ply",
       "viewer": {
         "rotation": [0, 0, 90],
         "center": [-5.478, -0.911, -0.463],
@@ -198,7 +198,7 @@
       "category": "pizzas",
       "vegetarian": false,
       "gluten_free": false,
-      "model3d": "models/plat3.ply",
+      "model3d": "https://pub-cb6130d8c47d41edaef19f32291a50d2.r2.dev/models/plat3.ply",
       "viewer": {
         "rotation": [0, 0, 0],
         "center": [-0.028, -1.308, -0.09],
@@ -314,7 +314,7 @@
       "category": "poissons",
       "vegetarian": false,
       "gluten_free": true,
-      "model3d": "models/plat2.ply",
+      "model3d": "https://pub-cb6130d8c47d41edaef19f32291a50d2.r2.dev/models/plat2.ply",
       "viewer": {
         "rotation": [180, 0, 0],
         "center": [0.983, -0.406, -0.155],
