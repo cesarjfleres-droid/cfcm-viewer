@@ -1,38 +1,25 @@
 /* ============================================================
- * Baia Bella · viewer.js — v24 · production
+ * Baia Bella · viewer.js — v27 · vitrine verrouillée
  *
- * Moteur = viewer Food3D "tasty crousty" VALIDÉ. Inchangé :
- * init PlayCanvas 2.10 (AppBase + createGraphicsDevice),
- * scale / camZ / centroïde tourné-négué, drag avec inertie
- * (ROT_SPEED 0.6, SMOOTH 0.25, FRICTION 0.94, MAX_TILT 40),
- * pinch-zoom + molette, ombre respirante, cleanup pagehide.
- * Positions caméra et zoom : NON TOUCHÉS.
- * Système R2 et URLs : NON TOUCHÉS.
+ * Moteur = viewer Food3D validé (PlayCanvas 2.10, AppBase +
+ * createGraphicsDevice, centroïde tourné-négué, pinch-zoom,
+ * capture composite, modes studio/immersif, selfie).
+ * R2, URLs, échelles, distance caméra : inchangés.
  *
- * v24 :
- *  1) CORRECTION D'ORIENTATION PAR PLAT — `correction: [x, y, z]`
- *     appliquée au chargement, composée en quaternion avec la
- *     rotation de base (le centroïde suit automatiquement).
- *     plat1 et plat3 étaient à l'envers (assiette visible) →
- *     correction X: 180. plat2 correct → [0, 0, 0].
- *     ⚠ Pourquoi X et pas Z : Z est l'axe de la caméra ; une
- *     rotation Z fait tourner le plat "comme une horloge" face à
- *     vous sans changer le côté visible. Pour retourner dessus/
- *     dessous, il faut X (ou Y) à 180.
- *  2) CAMÉRA DURCIE — vérification HTTPS, API absente, messages
- *     d'erreur précis (refus / occupée / introuvable), nouvelle
- *     tentative sans contrainte si la caméra arrière n'existe pas
- *     (desktop), bouton verrouillé pendant la demande.
- *  3) SELFIE — bouton retourner la caméra (visible en mode
- *     immersif), flux avant en miroir, capture dé-miroitée
- *     correctement.
- *  4) CAPTURE — partage natif (iPhone/Android : enregistrement
- *     dans Photos en un geste) avec téléchargement automatique
- *     en secours partout ailleurs.
+ * v27 — VITRINE VERROUILLÉE :
+ *  · L'assiette reste à plat en permanence (aucune bascule).
+ *  · Rotation horizontale BORNÉE : ±yawRange (30° par défaut)
+ *    autour d'un angle vedette par plat (yaw0) → l'arrière du
+ *    scan est inatteignable.
+ *  · Vertical = élévation caméra BORNÉE 36°–46° → dessous, flancs
+ *    et jupe de splats géométriquement impossibles à voir.
+ *  · Chaque plat démarre sur son angle vedette, cadré, centré.
+ *  · Zoom min resserré (0.8) : plus de gros plan dans la frange.
+ *  · Inertie conservée, s'arrête en douceur aux limites.
  *
  * Calibration sans redéployer :
- *   viewer.html?dish=plat1&fx=180&fy=0&fz=0   (correction)
- *   &ex=&ey=&ez=  (rotation de base)  &scale=&camz=&lift=
+ *   ?dish=plat1&yaw0=35&yawr=45&elev=38&elevmin=30&elevmax=52
+ *   &looky=1400  + ex/ey/ez, fx/fy/fz, scale, camz, lift
  * ============================================================ */
 (async function main() {
   const $ = (id) => document.getElementById(id);
@@ -75,12 +62,23 @@
       name: 'La Baia',
       price: '25 €',
       url: `${R2}/plat1.ply`,
-      euler: [0, 90, 0],          // base (validée pour le cadrage)
-      correction: [180, 0, 0],    // ✔ était à l'envers → retourné
-      centre: [-5.535, -0.903, -0.464],
-      scale: 2450,
+      // v29 — PLY NETTOYÉ : ré-exporté avec transform SuperSplat
+      // (repère déplacé + redressé : axe plat X → Y). Dessus vers -Y
+      // (signal "taille des splats", validé 3/3 sur vérités terrain)
+      // → même convention que plat2 désormais.
+      euler: [-90, 0, 0],
+      correction: [0, 0, 0],
+      // v30 — centre STRICT (P3–P97, opacité ≥ 0.6) : les résidus sous le
+      // bol gonflaient la mesure v29 et faisaient flotter le bol trop haut.
+      centre: [1.648, 5.16, 1.473],
+      scale: 2550,
       camZ: 10000,
-      lift: -1,
+      lift: -550,     // v30 : posé plus bas, contre son ombre — "comme avant"
+      yaw0: 0,        // angle vedette au chargement (à calibrer : &yaw0=)
+      yawRange: 360,  // v28 : tour complet libre
+      // v30 : pics résiduels SOUS la base du bol (capture 3) → plancher
+      // nettement relevé, on regarde dans le bol, jamais sous lui
+      elev0: 52, elevMin: 48, elevMax: 60, zoomMin: 0.55,
     },
     plat2: {
       name: 'Scampis sauvages rôtis',
@@ -88,21 +86,36 @@
       url: `${R2}/plat2.ply`,
       euler: [-90, 0, 0],
       correction: [0, 0, 0],      // ✔ correct, aucune correction
-      centre: [0.987, -0.398, -0.161],
-      scale: 2250,
+      // v29 — PLY NETTOYÉ : même repère qu'avant (aucun transform),
+      // juste les parasites en moins. Centre affiné, échelle quasi égale.
+      centre: [0.983, -0.401, -0.156],  // v30 : centre strict
+      scale: 2240,
       camZ: 10000,
-      lift: -1,
+      lift: -450,     // v30 : posé plus bas, contre son ombre
+      yaw0: 0,
+      yawRange: 360,
+      // v30 : "un peu moins penché" — plancher relevé, la frange du bord
+      // de l'assiette (capture 1) sort du champ
+      elev0: 46, elevMin: 42, elevMax: 54, zoomMin: 0.55,
     },
     plat3: {
       name: 'Fresca',
       price: '24 €',
       url: `${R2}/plat3.ply`,
-      euler: [90, 0, 0],
-      correction: [180, 0, 0],    // ✔ était à l'envers → retourné
-      centre: [-0.031, -1.269, -0.099],
-      scale: 2450,
+      // v29 — PLY NETTOYÉ : ré-exporté avec transform SuperSplat (repère
+      // déplacé). Dessus toujours vers -Y → rotation nette identique à
+      // l'ancienne ([90,0,0]+corr 180 ≡ [-90,0,0]), écrite directement.
+      euler: [-90, 0, 0],
+      correction: [0, 0, 0],
+      centre: [0.137, -1.179, 0.565],  // v30 : centre strict (résidus exclus)
+      scale: 2470,
       camZ: 10000,
-      lift: -1,
+      lift: -500,     // v30 : posée plus bas, mieux positionnée
+      yaw0: 0,
+      yawRange: 360,
+      // v30 : franges au bord de la croûte (capture 4) → plancher relevé,
+      // vue plongeante permanente
+      elev0: 46, elevMin: 42, elevMax: 54, zoomMin: 0.55,
     },
   };
 
@@ -124,11 +137,25 @@
   const CORR_Y        = num('fy', dish.correction[1]);
   const CORR_Z        = num('fz', dish.correction[2]);
   const SPLAT_SCALE   = num('scale', dish.scale);
-  const CAM_Z_BASE    = num('camz', dish.camZ);   // position caméra : inchangée
+  const CAM_Z_BASE    = num('camz', dish.camZ);   // distance caméra : inchangée (pas de zoom initial)
   const SPLAT_LIFT_Y  = num('lift', dish.lift);
 
+  // ----- Mise en scène "posé sur table" + VITRINE (v27) -----
+  // v27 : fenêtre VERROUILLÉE — les captures clients montraient encore
+  // des vues rasantes / inclinées. La caméra vit désormais dans un cône
+  // étroit autour de l'angle vedette, défini PAR PLAT (un bol profond et
+  // une assiette plate n'ont pas la même zone sûre). Le dessous, les
+  // flancs et la jupe de splats sont hors d'atteinte.
+  // Priorité : URL (calibration) > config du plat > défaut global.
+  const CAM_ELEV_DEG  = num('elev', dish.elev0 ?? 40);       // angle vedette vertical
+  const ELEV_MIN_DEG  = num('elevmin', dish.elevMin ?? 37);  // plancher : jamais rasant, jamais le dessous
+  const ELEV_MAX_DEG  = num('elevmax', dish.elevMax ?? 48);  // plafond : jamais de zénith écrasé
+  const LOOK_Y        = num('looky', 1400);       // point de visée au-dessus du plat (~62 %)
+  const YAW_START     = num('yaw0', dish.yaw0);   // angle vedette horizontal au chargement
+  const YAW_RANGE     = num('yawr', dish.yawRange); // rotation autorisée : ± autour de l'angle vedette
+
   const FOV_Y = 50;
-  const ZOOM_MIN = 0.55;   // zoom actuel : inchangé
+  const ZOOM_MIN = num('zoommin', dish.zoomMin ?? 0.55);  // v28 : gros plan profond rétabli
   const ZOOM_MAX = 1.7;
 
   // Fiche plat dans l'UI
@@ -189,6 +216,11 @@
   app.scene.skyboxIntensity = 0;
   setProgress(10);
 
+  const camPosFor = (dist, elevDeg) => {
+    const e = elevDeg * Math.PI / 180;
+    return { x: 0, y: dist * Math.sin(e), z: dist * Math.cos(e) };
+  };
+
   const cameraEntity = new pc.Entity('camera');
   cameraEntity.addComponent('camera', {
     clearColor: new pc.Color(0, 0, 0, 0),
@@ -198,8 +230,9 @@
     nearClip: 0.01,
     farClip: 1e7
   });
-  cameraEntity.setPosition(0, 0, CAM_Z_BASE);
-  cameraEntity.lookAt(0, 0, 0);
+  const _p0 = camPosFor(CAM_Z_BASE, CAM_ELEV_DEG);
+  cameraEntity.setPosition(_p0.x, _p0.y, _p0.z);
+  cameraEntity.lookAt(0, LOOK_Y, 0);
   app.root.addChild(cameraEntity);
   setProgress(18);
 
@@ -225,13 +258,17 @@
   }
   setProgress(92);
 
-  // ---------- 3. COMPOSITION : base + CORRECTION D'ORIENTATION ----------
-  // Rotation finale = correction (monde) ∘ base (locale), composée en
-  // quaternion. Le centroïde est transformé par la MÊME rotation finale,
-  // donc le plat reste parfaitement centré quelle que soit la correction.
-  const qBase = new pc.Quat().setFromEulerAngles(SPLAT_EULER_X, SPLAT_EULER_Y, SPLAT_EULER_Z);
-  const qCorr = new pc.Quat().setFromEulerAngles(CORR_X, CORR_Y, CORR_Z);
+  // ---------- 3. COMPOSITION : base + CORRECTION + MISE À PLAT TABLE ----------
+  // qFinal = table ∘ correction ∘ base.
+  //  - base + correction : orientent le dessus du plat vers la caméra (+Z), validé.
+  //  - table (Rx -90°)   : couche ensuite le plat à plat, dessus vers le haut (+Y),
+  //    horizontal et stable, prêt à être vu en plongée. rotation X/Z finales = 0.
+  // Le centroïde est transformé par la MÊME rotation finale → plat centré.
+  const qBase  = new pc.Quat().setFromEulerAngles(SPLAT_EULER_X, SPLAT_EULER_Y, SPLAT_EULER_Z);
+  const qCorr  = new pc.Quat().setFromEulerAngles(CORR_X, CORR_Y, CORR_Z);
+  const qTable = new pc.Quat().setFromEulerAngles(-90, 0, 0);
   const qFinal = new pc.Quat().mul2(qCorr, qBase);
+  qFinal.mul2(qTable, qFinal);
 
   const pivot = new pc.Entity('pivot');
   app.root.addChild(pivot);
@@ -384,22 +421,38 @@
     requesting = false;
   });
 
-  // ---------- 5. INTERACTION (inchangée : drag inertie + pinch + molette) ----------
+  // ---------- 5. INTERACTION — VITRINE GASTRONOMIQUE (v26) ----------
+  // Le plat reste TOUJOURS à plat sur la table (aucune bascule d'assiette).
+  //  · glisser horizontal → rotation du plat autour de son axe vertical,
+  //    BORNÉE à ±YAW_RANGE autour de l'angle vedette (pas de tour complet,
+  //    l'arrière du scan est inatteignable)
+  //  · glisser vertical → élévation de la caméra, BORNÉE entre ELEV_MIN
+  //    et ELEV_MAX (le dessous de l'assiette est géométriquement
+  //    impossible à voir, le zénith écrasé aussi)
+  // v28 : yawRange >= 180 → rotation 360° totalement libre (pas de butées).
+  // Une valeur plus basse (ex: 30) réactive la vitrine bornée par plat.
+  const FREE_YAW = YAW_RANGE >= 180;
+  const YAW_MIN = YAW_START - YAW_RANGE;
+  const YAW_MAX = YAW_START + YAW_RANGE;
+
   let isDragging = false;
   const pointers = new Map();
   let pinchStartDist = 0;
   let pinchStartZoom = 1;
   let lastX = 0, lastY = 0;
   let velY = 0, velX = 0;
-  let targetRotY = 0, targetRotX = 0;
-  let rotY = 0, rotX = 0;
+  let targetRotY = YAW_START, rotY = YAW_START;
+  let targetElev = CAM_ELEV_DEG, elev = CAM_ELEV_DEG;
   let zoom = 1, targetZoom = 1;
   let userInteracted = false;
 
-  const ROT_SPEED = 0.6;
-  const SMOOTH    = 0.25;
-  const FRICTION  = 0.94;
-  const MAX_TILT  = 40;
+  const ROT_SPEED  = 0.6;    // v28 : vivacité d'origine — le 360° libre doit filer sous le doigt
+  const ELEV_SPEED = 0.08;   // verticale très douce : ±10° de fenêtre seulement
+  const SMOOTH     = 0.25;
+  const FRICTION   = 0.94;
+
+  const clampYaw  = FREE_YAW ? (y) => y : (y) => Math.max(YAW_MIN, Math.min(YAW_MAX, y));
+  const clampElev = (e) => Math.max(ELEV_MIN_DEG, Math.min(ELEV_MAX_DEG, e));
 
   function pinchDistance() {
     const pts = [...pointers.values()];
@@ -443,9 +496,10 @@
     lastX = e.clientX;
     lastY = e.clientY;
     velY = dx * ROT_SPEED;
-    velX = dy * ROT_SPEED;
-    targetRotY += velY;
-    targetRotX = Math.max(-MAX_TILT, Math.min(MAX_TILT, targetRotX + velX));
+    // glisser vers le bas = caméra qui descend (vue plus frontale), borné
+    velX = dy * ELEV_SPEED;
+    targetRotY = clampYaw(targetRotY + velY);
+    targetElev = clampElev(targetElev - velX);
   }
 
   function onUp(e) {
@@ -476,7 +530,8 @@
   }, { passive: false });
 
   resetBtn.addEventListener('click', () => {
-    targetRotX = targetRotY = 0;
+    targetRotY = YAW_START;
+    targetElev = CAM_ELEV_DEG;
     velX = velY = 0;
     targetZoom = 1;
   });
@@ -487,8 +542,11 @@
     const t = (performance.now() - t0) / 1000;
 
     if (userInteracted && !isDragging) {
-      targetRotY += velY;
-      targetRotX = Math.max(-MAX_TILT, Math.min(MAX_TILT, targetRotX + velX));
+      // inertie bornée : la rotation glisse puis s'arrête en douceur aux limites
+      targetRotY = clampYaw(targetRotY + velY);
+      targetElev = clampElev(targetElev - velX);
+      if (!FREE_YAW && (targetRotY === YAW_MIN || targetRotY === YAW_MAX)) velY = 0;
+      if (targetElev === ELEV_MIN_DEG || targetElev === ELEV_MAX_DEG) velX = 0;
       velY *= FRICTION;
       velX *= FRICTION;
       if (Math.abs(velY) < 0.01) velY = 0;
@@ -496,11 +554,15 @@
     }
 
     rotY += (targetRotY - rotY) * SMOOTH;
-    rotX += (targetRotX - rotX) * SMOOTH;
+    elev += (targetElev - elev) * SMOOTH;
     zoom += (targetZoom - zoom) * SMOOTH;
 
-    pivot.setLocalEulerAngles(rotX, 0, rotY);
-    cameraEntity.setPosition(0, 0, CAM_Z_BASE * zoom);
+    // L'assiette reste à plat en toutes circonstances : seule la rotation
+    // autour de son axe vertical (bornée) est appliquée au modèle.
+    pivot.setLocalEulerAngles(0, rotY, 0);
+    const _p = camPosFor(CAM_Z_BASE * zoom, elev);
+    cameraEntity.setPosition(_p.x, _p.y, _p.z);
+    cameraEntity.lookAt(0, LOOK_Y, 0);
 
     const s = (1 + Math.sin(t * 1.2) * 0.04) / zoom;
     const o = 0.85 + Math.sin(t * 1.2) * 0.08;
@@ -567,10 +629,10 @@
       paintStudioBackground(ctx, W, H);
     }
 
-    // Ombre de contact
+    // Ombre de contact (sous le plat posé bas — aligné avec le CSS)
     const cx = W / 2;
-    const cy = H * 0.62;
-    const rx = W * 0.21;
+    const cy = H * 0.73;
+    const rx = W * 0.23;
     const ry = H * 0.035;
     ctx.save();
     ctx.translate(cx, cy);

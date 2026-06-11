@@ -6,7 +6,7 @@
    ================================================================= */
 
 /* ⚙️  Viewer 3D — incrémenter à chaque déploiement (cache) */
-const VIEWER_VERSION = '23';
+const VIEWER_VERSION = '27';
 const VIEWER_URL = 'viewer.html';
 
 /* 📋  Carte — model: 'platX' active le bouton 3D */
