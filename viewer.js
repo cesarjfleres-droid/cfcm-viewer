@@ -1,20 +1,20 @@
 /* ============================================================
- * Baia Bella · viewer.js — v26 · vitrine gastronomique
+ * Baia Bella · viewer.js — v27 · vitrine verrouillée
  *
  * Moteur = viewer Food3D validé (PlayCanvas 2.10, AppBase +
  * createGraphicsDevice, centroïde tourné-négué, pinch-zoom,
  * capture composite, modes studio/immersif, selfie).
  * R2, URLs, échelles, distance caméra : inchangés.
  *
- * v26 — PRÉSENTATION, PAS MODÉLISATION :
+ * v27 — VITRINE VERROUILLÉE :
  *  · L'assiette reste à plat en permanence (aucune bascule).
- *  · Rotation horizontale BORNÉE : ±yawRange (50° par défaut)
+ *  · Rotation horizontale BORNÉE : ±yawRange (30° par défaut)
  *    autour d'un angle vedette par plat (yaw0) → l'arrière du
  *    scan est inatteignable.
- *  · Vertical = élévation caméra BORNÉE 30°–52° → le dessous de
- *    l'assiette est géométriquement impossible à voir.
+ *  · Vertical = élévation caméra BORNÉE 36°–46° → dessous, flancs
+ *    et jupe de splats géométriquement impossibles à voir.
  *  · Chaque plat démarre sur son angle vedette, cadré, centré.
- *  · Zoom min resserré (0.7) : plus de gros plan dans les artefacts.
+ *  · Zoom min resserré (0.8) : plus de gros plan dans la frange.
  *  · Inertie conservée, s'arrête en douceur aux limites.
  *
  * Calibration sans redéployer :
@@ -69,7 +69,10 @@
       camZ: 10000,
       lift: -1,
       yaw0: 0,        // angle vedette au chargement (à calibrer : &yaw0=)
-      yawRange: 50,   // rotation autorisée : ±50° autour de l'angle vedette
+      yawRange: 30,   // v27 : ±30° — rotation d'admiration, pas d'inspection
+      // Bol profond : on regarde DEDANS, jamais le flanc (capture 1 :
+      // vue rasante = jupe de splats sous le rebord) → fenêtre haute
+      elev0: 44, elevMin: 40, elevMax: 50, zoomMin: 0.9,
     },
     plat2: {
       name: 'Scampis sauvages rôtis',
@@ -82,7 +85,10 @@
       camZ: 10000,
       lift: -1,
       yaw0: 0,
-      yawRange: 50,
+      yawRange: 30,
+      // Assiette creuse : la frange apparaissait sous le bord avant
+      // (captures 3-5) → plancher relevé, gros plan limité
+      elev0: 40, elevMin: 37, elevMax: 47, zoomMin: 0.85,
     },
     plat3: {
       name: 'Fresca',
@@ -95,7 +101,10 @@
       camZ: 10000,
       lift: -1,
       yaw0: 0,
-      yawRange: 50,
+      yawRange: 30,
+      // Pizza plate : la croûte frangeait en vue inclinée (capture 2)
+      // → vue plongeante uniquement
+      elev0: 42, elevMin: 38, elevMax: 50, zoomMin: 0.85,
     },
   };
 
@@ -120,19 +129,22 @@
   const CAM_Z_BASE    = num('camz', dish.camZ);   // distance caméra : inchangée (pas de zoom initial)
   const SPLAT_LIFT_Y  = num('lift', dish.lift);
 
-  // ----- Mise en scène "posé sur table" + VITRINE (v26) -----
-  // Le plat est couché à plat, la caméra le regarde en plongée et vise
-  // au-dessus de lui → plat bas dans l'écran. v26 : présentation
-  // gastronomique — angles bornés, jamais de dessous, jamais d'arrière.
-  const CAM_ELEV_DEG  = num('elev', 38);          // élévation de départ (= angle vedette vertical)
-  const ELEV_MIN_DEG  = num('elevmin', 30);       // jamais plus rasant (le dessous est inatteignable)
-  const ELEV_MAX_DEG  = num('elevmax', 52);       // jamais plus zénithal
+  // ----- Mise en scène "posé sur table" + VITRINE (v27) -----
+  // v27 : fenêtre VERROUILLÉE — les captures clients montraient encore
+  // des vues rasantes / inclinées. La caméra vit désormais dans un cône
+  // étroit autour de l'angle vedette, défini PAR PLAT (un bol profond et
+  // une assiette plate n'ont pas la même zone sûre). Le dessous, les
+  // flancs et la jupe de splats sont hors d'atteinte.
+  // Priorité : URL (calibration) > config du plat > défaut global.
+  const CAM_ELEV_DEG  = num('elev', dish.elev0 ?? 40);       // angle vedette vertical
+  const ELEV_MIN_DEG  = num('elevmin', dish.elevMin ?? 37);  // plancher : jamais rasant, jamais le dessous
+  const ELEV_MAX_DEG  = num('elevmax', dish.elevMax ?? 48);  // plafond : jamais de zénith écrasé
   const LOOK_Y        = num('looky', 1400);       // point de visée au-dessus du plat (~62 %)
   const YAW_START     = num('yaw0', dish.yaw0);   // angle vedette horizontal au chargement
   const YAW_RANGE     = num('yawr', dish.yawRange); // rotation autorisée : ± autour de l'angle vedette
 
   const FOV_Y = 50;
-  const ZOOM_MIN = 0.7;    // v26 : resserré (0.55 → 0.7) — le très gros plan révélait les artefacts du scan
+  const ZOOM_MIN = num('zoommin', dish.zoomMin ?? 0.85);  // gros plan bloqué : il révélait la frange du scan
   const ZOOM_MAX = 1.7;
 
   // Fiche plat dans l'UI
@@ -420,8 +432,8 @@
   let zoom = 1, targetZoom = 1;
   let userInteracted = false;
 
-  const ROT_SPEED  = 0.45;   // un peu plus doux : plage bornée = gestes plus précis
-  const ELEV_SPEED = 0.12;   // sensibilité verticale (douce, présentation)
+  const ROT_SPEED  = 0.40;   // doux : on admire, on n'inspecte pas
+  const ELEV_SPEED = 0.08;   // verticale très douce : ±10° de fenêtre seulement
   const SMOOTH     = 0.25;
   const FRICTION   = 0.94;
 
