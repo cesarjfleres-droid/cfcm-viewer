@@ -124,8 +124,15 @@
   const CORR_Y        = num('fy', dish.correction[1]);
   const CORR_Z        = num('fz', dish.correction[2]);
   const SPLAT_SCALE   = num('scale', dish.scale);
-  const CAM_Z_BASE    = num('camz', dish.camZ);   // position caméra : inchangée
+  const CAM_Z_BASE    = num('camz', dish.camZ);   // distance caméra : inchangée (pas de zoom initial)
   const SPLAT_LIFT_Y  = num('lift', dish.lift);
+
+  // ----- Mise en scène "posé sur table" (v25) -----
+  // Le plat est couché à plat (dessus vers le haut), la caméra le regarde
+  // en légère plongée et vise au-dessus de lui → le plat descend dans
+  // l'écran, comme posé devant l'utilisateur. Taille apparente inchangée.
+  const CAM_ELEV_DEG  = num('elev', 38);     // élévation caméra (° au-dessus de la table)
+  const LOOK_Y        = num('looky', 1400);  // point de visée au-dessus du plat → plat bas dans l'écran (~62 %)
 
   const FOV_Y = 50;
   const ZOOM_MIN = 0.55;   // zoom actuel : inchangé
@@ -189,6 +196,13 @@
   app.scene.skyboxIntensity = 0;
   setProgress(10);
 
+  const ELEV_RAD = CAM_ELEV_DEG * Math.PI / 180;
+  const camPosFor = (dist) => ({
+    x: 0,
+    y: dist * Math.sin(ELEV_RAD),
+    z: dist * Math.cos(ELEV_RAD)
+  });
+
   const cameraEntity = new pc.Entity('camera');
   cameraEntity.addComponent('camera', {
     clearColor: new pc.Color(0, 0, 0, 0),
@@ -198,8 +212,9 @@
     nearClip: 0.01,
     farClip: 1e7
   });
-  cameraEntity.setPosition(0, 0, CAM_Z_BASE);
-  cameraEntity.lookAt(0, 0, 0);
+  const _p0 = camPosFor(CAM_Z_BASE);
+  cameraEntity.setPosition(_p0.x, _p0.y, _p0.z);
+  cameraEntity.lookAt(0, LOOK_Y, 0);
   app.root.addChild(cameraEntity);
   setProgress(18);
 
@@ -225,13 +240,17 @@
   }
   setProgress(92);
 
-  // ---------- 3. COMPOSITION : base + CORRECTION D'ORIENTATION ----------
-  // Rotation finale = correction (monde) ∘ base (locale), composée en
-  // quaternion. Le centroïde est transformé par la MÊME rotation finale,
-  // donc le plat reste parfaitement centré quelle que soit la correction.
-  const qBase = new pc.Quat().setFromEulerAngles(SPLAT_EULER_X, SPLAT_EULER_Y, SPLAT_EULER_Z);
-  const qCorr = new pc.Quat().setFromEulerAngles(CORR_X, CORR_Y, CORR_Z);
+  // ---------- 3. COMPOSITION : base + CORRECTION + MISE À PLAT TABLE ----------
+  // qFinal = table ∘ correction ∘ base.
+  //  - base + correction : orientent le dessus du plat vers la caméra (+Z), validé.
+  //  - table (Rx -90°)   : couche ensuite le plat à plat, dessus vers le haut (+Y),
+  //    horizontal et stable, prêt à être vu en plongée. rotation X/Z finales = 0.
+  // Le centroïde est transformé par la MÊME rotation finale → plat centré.
+  const qBase  = new pc.Quat().setFromEulerAngles(SPLAT_EULER_X, SPLAT_EULER_Y, SPLAT_EULER_Z);
+  const qCorr  = new pc.Quat().setFromEulerAngles(CORR_X, CORR_Y, CORR_Z);
+  const qTable = new pc.Quat().setFromEulerAngles(-90, 0, 0);
   const qFinal = new pc.Quat().mul2(qCorr, qBase);
+  qFinal.mul2(qTable, qFinal);
 
   const pivot = new pc.Entity('pivot');
   app.root.addChild(pivot);
@@ -399,7 +418,7 @@
   const ROT_SPEED = 0.6;
   const SMOOTH    = 0.25;
   const FRICTION  = 0.94;
-  const MAX_TILT  = 40;
+  const MAX_TILT  = 18;   // v25 : plat posé → inclinaison limitée, stable et réaliste
 
   function pinchDistance() {
     const pts = [...pointers.values()];
@@ -499,8 +518,12 @@
     rotX += (targetRotX - rotX) * SMOOTH;
     zoom += (targetZoom - zoom) * SMOOTH;
 
-    pivot.setLocalEulerAngles(rotX, 0, rotY);
-    cameraEntity.setPosition(0, 0, CAM_Z_BASE * zoom);
+    // v25 : glisser horizontal = rotation "tourne-disque" autour de l'axe
+    // vertical du plat posé (Y) · glisser vertical = légère inclinaison.
+    pivot.setLocalEulerAngles(rotX, rotY, 0);
+    const _p = camPosFor(CAM_Z_BASE * zoom);
+    cameraEntity.setPosition(_p.x, _p.y, _p.z);
+    cameraEntity.lookAt(0, LOOK_Y, 0);
 
     const s = (1 + Math.sin(t * 1.2) * 0.04) / zoom;
     const o = 0.85 + Math.sin(t * 1.2) * 0.08;
@@ -567,10 +590,10 @@
       paintStudioBackground(ctx, W, H);
     }
 
-    // Ombre de contact
+    // Ombre de contact (sous le plat posé bas — aligné avec le CSS)
     const cx = W / 2;
-    const cy = H * 0.62;
-    const rx = W * 0.21;
+    const cy = H * 0.73;
+    const rx = W * 0.23;
     const ry = H * 0.035;
     ctx.save();
     ctx.translate(cx, cy);

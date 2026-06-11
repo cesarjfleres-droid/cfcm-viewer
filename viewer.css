@@ -74,8 +74,8 @@ body.mode-ar #flip-btn { display: flex; }
 #shadow {
   position: fixed;
   left: 50%;
-  top: 62%;
-  width: 42vw;
+  top: 73%;
+  width: 46vw;
   height: 8vw;
   max-height: 60px;
   transform: translate(-50%, -50%);
