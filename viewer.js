@@ -70,15 +70,16 @@
       correction: [0, 0, 0],
       // v30 — centre STRICT (P3–P97, opacité ≥ 0.6) : les résidus sous le
       // bol gonflaient la mesure v29 et faisaient flotter le bol trop haut.
-      centre: [1.648, 5.16, 1.473],
+      centre: [1.648, 5.16, 1.473],    // centre strict du PLY de Chris (fichier INTACT)
       scale: 2550,
       camZ: 10000,
       lift: -550,     // v30 : posé plus bas, contre son ombre — "comme avant"
       yaw0: 0,        // angle vedette au chargement (à calibrer : &yaw0=)
       yawRange: 360,  // v28 : tour complet libre
-      // v30 : pics résiduels SOUS la base du bol (capture 3) → plancher
-      // nettement relevé, on regarde dans le bol, jamais sous lui
-      elev0: 52, elevMin: 48, elevMax: 60, zoomMin: 0.55,
+      // v32 : on garde le PLY intact (couper les pics ouvrait un trou
+      // dans la base) → c'est l'ANGLE qu'on élimine : plancher haut, les
+      // pics sous le bol restent masqués par le bol lui-même
+      elev0: 54, elevMin: 50, elevMax: 62, zoomMin: 0.55,
     },
     plat2: {
       name: 'Scampis sauvages rôtis',
