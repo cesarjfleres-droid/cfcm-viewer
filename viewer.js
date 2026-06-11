@@ -62,10 +62,14 @@
       name: 'La Baia',
       price: '25 €',
       url: `${R2}/plat1.ply`,
-      euler: [0, 90, 0],          // base (validée pour le cadrage)
-      correction: [180, 0, 0],    // ✔ était à l'envers → retourné
-      centre: [-5.535, -0.903, -0.464],
-      scale: 2450,
+      // v29 — PLY NETTOYÉ : ré-exporté avec transform SuperSplat
+      // (repère déplacé + redressé : axe plat X → Y). Dessus vers -Y
+      // (signal "taille des splats", validé 3/3 sur vérités terrain)
+      // → même convention que plat2 désormais.
+      euler: [-90, 0, 0],
+      correction: [0, 0, 0],
+      centre: [1.646, 5.203, 1.467],   // mesuré sur le fichier nettoyé
+      scale: 2550,                     // étendue max 0.874 → taille visuelle constante
       camZ: 10000,
       lift: -1,
       yaw0: 0,        // angle vedette au chargement (à calibrer : &yaw0=)
@@ -80,8 +84,10 @@
       url: `${R2}/plat2.ply`,
       euler: [-90, 0, 0],
       correction: [0, 0, 0],      // ✔ correct, aucune correction
-      centre: [0.987, -0.398, -0.161],
-      scale: 2250,
+      // v29 — PLY NETTOYÉ : même repère qu'avant (aucun transform),
+      // juste les parasites en moins. Centre affiné, échelle quasi égale.
+      centre: [0.984, -0.398, -0.162],
+      scale: 2240,                // étendue max 0.994
       camZ: 10000,
       lift: -1,
       yaw0: 0,
@@ -94,10 +100,13 @@
       name: 'Fresca',
       price: '24 €',
       url: `${R2}/plat3.ply`,
-      euler: [90, 0, 0],
-      correction: [180, 0, 0],    // ✔ était à l'envers → retourné
-      centre: [-0.031, -1.269, -0.099],
-      scale: 2450,
+      // v29 — PLY NETTOYÉ : ré-exporté avec transform SuperSplat (repère
+      // déplacé). Dessus toujours vers -Y → rotation nette identique à
+      // l'ancienne ([90,0,0]+corr 180 ≡ [-90,0,0]), écrite directement.
+      euler: [-90, 0, 0],
+      correction: [0, 0, 0],
+      centre: [0.138, -1.142, 0.577],  // mesuré sur le fichier nettoyé
+      scale: 2470,                     // étendue max 0.903 → taille visuelle constante
       camZ: 10000,
       lift: -1,
       yaw0: 0,
