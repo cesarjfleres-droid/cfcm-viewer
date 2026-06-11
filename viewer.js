@@ -69,10 +69,10 @@
       camZ: 10000,
       lift: -1,
       yaw0: 0,        // angle vedette au chargement (à calibrer : &yaw0=)
-      yawRange: 30,   // v27 : ±30° — rotation d'admiration, pas d'inspection
+      yawRange: 360,  // v28 : tour complet libre
       // Bol profond : on regarde DEDANS, jamais le flanc (capture 1 :
       // vue rasante = jupe de splats sous le rebord) → fenêtre haute
-      elev0: 44, elevMin: 40, elevMax: 50, zoomMin: 0.9,
+      elev0: 44, elevMin: 40, elevMax: 50, zoomMin: 0.55,
     },
     plat2: {
       name: 'Scampis sauvages rôtis',
@@ -85,10 +85,10 @@
       camZ: 10000,
       lift: -1,
       yaw0: 0,
-      yawRange: 30,
+      yawRange: 360,
       // Assiette creuse : la frange apparaissait sous le bord avant
       // (captures 3-5) → plancher relevé, gros plan limité
-      elev0: 40, elevMin: 37, elevMax: 47, zoomMin: 0.85,
+      elev0: 40, elevMin: 37, elevMax: 47, zoomMin: 0.55,
     },
     plat3: {
       name: 'Fresca',
@@ -101,10 +101,10 @@
       camZ: 10000,
       lift: -1,
       yaw0: 0,
-      yawRange: 30,
+      yawRange: 360,
       // Pizza plate : la croûte frangeait en vue inclinée (capture 2)
       // → vue plongeante uniquement
-      elev0: 42, elevMin: 38, elevMax: 50, zoomMin: 0.85,
+      elev0: 42, elevMin: 38, elevMax: 50, zoomMin: 0.55,
     },
   };
 
@@ -144,7 +144,7 @@
   const YAW_RANGE     = num('yawr', dish.yawRange); // rotation autorisée : ± autour de l'angle vedette
 
   const FOV_Y = 50;
-  const ZOOM_MIN = num('zoommin', dish.zoomMin ?? 0.85);  // gros plan bloqué : il révélait la frange du scan
+  const ZOOM_MIN = num('zoommin', dish.zoomMin ?? 0.55);  // v28 : gros plan profond rétabli
   const ZOOM_MAX = 1.7;
 
   // Fiche plat dans l'UI
@@ -418,6 +418,9 @@
   //  · glisser vertical → élévation de la caméra, BORNÉE entre ELEV_MIN
   //    et ELEV_MAX (le dessous de l'assiette est géométriquement
   //    impossible à voir, le zénith écrasé aussi)
+  // v28 : yawRange >= 180 → rotation 360° totalement libre (pas de butées).
+  // Une valeur plus basse (ex: 30) réactive la vitrine bornée par plat.
+  const FREE_YAW = YAW_RANGE >= 180;
   const YAW_MIN = YAW_START - YAW_RANGE;
   const YAW_MAX = YAW_START + YAW_RANGE;
 
@@ -432,12 +435,12 @@
   let zoom = 1, targetZoom = 1;
   let userInteracted = false;
 
-  const ROT_SPEED  = 0.40;   // doux : on admire, on n'inspecte pas
+  const ROT_SPEED  = 0.6;    // v28 : vivacité d'origine — le 360° libre doit filer sous le doigt
   const ELEV_SPEED = 0.08;   // verticale très douce : ±10° de fenêtre seulement
   const SMOOTH     = 0.25;
   const FRICTION   = 0.94;
 
-  const clampYaw  = (y) => Math.max(YAW_MIN, Math.min(YAW_MAX, y));
+  const clampYaw  = FREE_YAW ? (y) => y : (y) => Math.max(YAW_MIN, Math.min(YAW_MAX, y));
   const clampElev = (e) => Math.max(ELEV_MIN_DEG, Math.min(ELEV_MAX_DEG, e));
 
   function pinchDistance() {
@@ -531,7 +534,7 @@
       // inertie bornée : la rotation glisse puis s'arrête en douceur aux limites
       targetRotY = clampYaw(targetRotY + velY);
       targetElev = clampElev(targetElev - velX);
-      if (targetRotY === YAW_MIN || targetRotY === YAW_MAX) velY = 0;
+      if (!FREE_YAW && (targetRotY === YAW_MIN || targetRotY === YAW_MAX)) velY = 0;
       if (targetElev === ELEV_MIN_DEG || targetElev === ELEV_MAX_DEG) velX = 0;
       velY *= FRICTION;
       velX *= FRICTION;
