@@ -68,15 +68,17 @@
       // → même convention que plat2 désormais.
       euler: [-90, 0, 0],
       correction: [0, 0, 0],
-      centre: [1.646, 5.203, 1.467],   // mesuré sur le fichier nettoyé
-      scale: 2550,                     // étendue max 0.874 → taille visuelle constante
+      // v30 — centre STRICT (P3–P97, opacité ≥ 0.6) : les résidus sous le
+      // bol gonflaient la mesure v29 et faisaient flotter le bol trop haut.
+      centre: [1.648, 5.16, 1.473],
+      scale: 2550,
       camZ: 10000,
-      lift: -1,
+      lift: -550,     // v30 : posé plus bas, contre son ombre — "comme avant"
       yaw0: 0,        // angle vedette au chargement (à calibrer : &yaw0=)
       yawRange: 360,  // v28 : tour complet libre
-      // Bol profond : on regarde DEDANS, jamais le flanc (capture 1 :
-      // vue rasante = jupe de splats sous le rebord) → fenêtre haute
-      elev0: 44, elevMin: 40, elevMax: 50, zoomMin: 0.55,
+      // v30 : pics résiduels SOUS la base du bol (capture 3) → plancher
+      // nettement relevé, on regarde dans le bol, jamais sous lui
+      elev0: 52, elevMin: 48, elevMax: 60, zoomMin: 0.55,
     },
     plat2: {
       name: 'Scampis sauvages rôtis',
@@ -86,15 +88,15 @@
       correction: [0, 0, 0],      // ✔ correct, aucune correction
       // v29 — PLY NETTOYÉ : même repère qu'avant (aucun transform),
       // juste les parasites en moins. Centre affiné, échelle quasi égale.
-      centre: [0.984, -0.398, -0.162],
-      scale: 2240,                // étendue max 0.994
+      centre: [0.983, -0.401, -0.156],  // v30 : centre strict
+      scale: 2240,
       camZ: 10000,
-      lift: -1,
+      lift: -450,     // v30 : posé plus bas, contre son ombre
       yaw0: 0,
       yawRange: 360,
-      // Assiette creuse : la frange apparaissait sous le bord avant
-      // (captures 3-5) → plancher relevé, gros plan limité
-      elev0: 40, elevMin: 37, elevMax: 47, zoomMin: 0.55,
+      // v30 : "un peu moins penché" — plancher relevé, la frange du bord
+      // de l'assiette (capture 1) sort du champ
+      elev0: 46, elevMin: 42, elevMax: 54, zoomMin: 0.55,
     },
     plat3: {
       name: 'Fresca',
@@ -105,15 +107,15 @@
       // l'ancienne ([90,0,0]+corr 180 ≡ [-90,0,0]), écrite directement.
       euler: [-90, 0, 0],
       correction: [0, 0, 0],
-      centre: [0.138, -1.142, 0.577],  // mesuré sur le fichier nettoyé
-      scale: 2470,                     // étendue max 0.903 → taille visuelle constante
+      centre: [0.137, -1.179, 0.565],  // v30 : centre strict (résidus exclus)
+      scale: 2470,
       camZ: 10000,
-      lift: -1,
+      lift: -500,     // v30 : posée plus bas, mieux positionnée
       yaw0: 0,
       yawRange: 360,
-      // Pizza plate : la croûte frangeait en vue inclinée (capture 2)
-      // → vue plongeante uniquement
-      elev0: 42, elevMin: 38, elevMax: 50, zoomMin: 0.55,
+      // v30 : franges au bord de la croûte (capture 4) → plancher relevé,
+      // vue plongeante permanente
+      elev0: 46, elevMin: 42, elevMax: 54, zoomMin: 0.55,
     },
   };
 
