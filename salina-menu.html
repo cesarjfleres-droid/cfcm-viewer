@@ -12,9 +12,6 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Pinyon+Script&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
 
-<!-- Visionneuse 3D Google model-viewer (chargée en module ; le reste de la page fonctionne même si le CDN est indisponible) -->
-<script type="module" src="https://unpkg.com/@google/model-viewer@3.5.0/dist/model-viewer.min.js"></script>
-
 <style>
 /* ============================================================
    SALINA — TOKENS
@@ -192,6 +189,7 @@ button{font-family:inherit;cursor:pointer;background:none;border:none;color:inhe
 
 /* Badge 3D — la signature interactive (seul usage du bleu marine) */
 .badge3d{
+  text-decoration:none;
   flex:none;align-self:center;
   display:inline-flex;align-items:center;gap:.36em;
   font-family:"Jost",sans-serif;font-weight:500;font-size:.6rem;
@@ -240,44 +238,6 @@ button{font-family:inherit;cursor:pointer;background:none;border:none;color:inhe
 .credit b{color:var(--mist);font-weight:400}
 
 /* ============================================================
-   MODALE 3D
-   ============================================================ */
-.modal{
-  position:fixed;inset:0;z-index:100;display:none;
-  background:rgba(253,253,251,.93);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
-  flex-direction:column;
-}
-.modal.is-open{display:flex}
-.modal__bar{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;padding:var(--pad)}
-.modal__title{font-weight:500;font-size:1.25rem;color:var(--foam);line-height:1.25}
-.modal__price{font-family:"Jost",sans-serif;font-weight:500;font-size:.85rem;color:var(--gold);margin-top:.25rem;letter-spacing:.03em}
-.modal__close{
-  flex:none;width:2.5rem;height:2.5rem;border-radius:50%;border:1px solid var(--line);
-  display:flex;align-items:center;justify-content:center;font-size:1.4rem;color:var(--foam);
-  transition:border-color .25s,background .25s;
-}
-.modal__close:hover{border-color:var(--marine);background:var(--marine-dim)}
-.modal__stage{flex:1;position:relative;margin:0 var(--pad) var(--pad);
-  border:1px solid var(--line);border-radius:6px;overflow:hidden;
-  background:radial-gradient(80% 80% at 50% 35%, var(--ink-2), var(--abyss))}
-model-viewer{width:100%;height:100%;--poster-color:transparent}
-.modal__fallback{
-  position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;
-  gap:.6rem;text-align:center;padding:2rem;color:var(--mist);font-style:italic;
-}
-.modal__fallback .ic{font-size:2rem;color:var(--mist-dim);font-style:normal}
-.modal.has-error .modal__fallback{display:flex}
-.modal__caption{padding:0 var(--pad) calc(var(--pad) + env(safe-area-inset-bottom));text-align:center;
-  font-family:"Jost",sans-serif;font-weight:300;font-size:.62rem;letter-spacing:.16em;
-  text-transform:uppercase;color:var(--mist-dim)}
-.modal__caption .spark{color:var(--marine)}
-
-/* Barre de progression model-viewer */
-.progress-bar{display:block;width:60%;max-width:200px;height:2px;background:var(--line);border-radius:2px;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
-.progress-bar .fill{display:block;height:100%;width:0;background:var(--marine);border-radius:2px;transition:width .2s}
-.progress-bar.hide{display:none}
-
-/* ============================================================
    ANIMATIONS D'APPARITION
    ============================================================ */
 .reveal{opacity:0;transform:translateY(14px);transition:opacity .6s ease,transform .6s ease}
@@ -285,7 +245,8 @@ model-viewer{width:100%;height:100%;--poster-color:transparent}
 @media(prefers-reduced-motion:reduce){
   *{animation:none!important;scroll-behavior:auto!important}
   .reveal{opacity:1;transform:none;transition:none}
-  .badge3d{animation:none}
+  .badge3d{
+  text-decoration:none;animation:none}
 }
 </style>
 </head>
@@ -332,23 +293,6 @@ model-viewer{width:100%;height:100%;--poster-color:transparent}
   </footer>
 </main>
 
-<!-- MODALE 3D -->
-<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-  <div class="modal__bar">
-    <div>
-      <p class="modal__title" id="modalTitle">—</p>
-      <p class="modal__price" id="modalPrice"></p>
-    </div>
-    <button class="modal__close" id="modalClose" aria-label="Fermer">✕</button>
-  </div>
-  <div class="modal__stage" id="modalStage">
-    <div class="modal__fallback">
-      <span class="ic">◷</span>
-      Aperçu 3D temporairement indisponible.<br>Vérifiez votre connexion.
-    </div>
-  </div>
-  <p class="modal__caption"><span class="spark">✦</span>&nbsp; Pivotez &amp; zoomez le plat — pincez pour explorer</p>
-</div>
 
 <script>
 /* ============================================================
@@ -360,17 +304,10 @@ model-viewer{width:100%;height:100%;--poster-color:transparent}
      price     : "38"  | "18 / 22" (deux formats) | "20 / 100 g" géré via `unit`
      unit      : libellé d'unité ("pour 2", "/ 100 g", "/ pièce"...) — optionnel
      alg       : tableau des n° d'allergènes — optionnel
-     model     : URL du fichier .glb pour la vue 3D — optionnel
-                 (la présence d'une URL ajoute automatiquement le badge "3D")
-
-   >>> POUR BRANCHER TES MODÈLES LUMA :
-       Remplace simplement DEMO_GLB ci-dessous, OU mets l'URL .glb
-       générée par ta pipeline dans le champ `model` de chaque plat.
+     splat     : clé du plat dans salina-viewer.js — optionnel
+                 (la présence d'une clé ajoute automatiquement le badge "3D",
+                  qui ouvre salina-viewer.html?dish=cléDuPlat)
    ============================================================ */
-
-// URL de démonstration (modèle alimentaire hébergé par l'équipe model-viewer).
-// À remplacer par les .glb issus de Luma Labs, plat par plat.
-const DEMO_GLB = "https://modelviewer.dev/shared-assets/models/Avocado.glb";
 
 const CHAPTERS = [
   {
@@ -440,7 +377,7 @@ const CHAPTERS = [
       {
         title: "Tartares",
         items: [
-          { name:"Thon", price:"28", alg:[4], model:DEMO_GLB },
+          { name:"Thon", price:"28", alg:[4], splat:"thon" },
           { name:"Saumon", price:"26", alg:[4] },
           { name:"Daurade", price:"26", alg:[4] },
           { name:"Sériole", price:"28", alg:[4] },
@@ -500,12 +437,12 @@ const CHAPTERS = [
           {
             name:"Plateau Royal",
             desc:"Crevette rouge de Mazara (2), crevette de Sanremo (2), langoustine (2), tartare de saumon, tartare de thon, huîtres Gillardeau n.2 (2) & n.3 (2)",
-            price:"180", unit:"pour 2", alg:[2,4,14], model:DEMO_GLB
+            price:"180", unit:"pour 2", alg:[2,4,14]
           },
           {
             name:"Plateau Salina",
             desc:"Crevette rouge de Mazara (2), crevette de Sanremo (2), langoustine (2), tartare de saumon, tartare de thon, homard bleu de Normandie, huîtres Gillardeau n.2 & n.3 (2 ch.), huîtres Giol n.2 & n.3 (2 ch.)",
-            price:"330", unit:"pour 2", alg:[2,4,14], model:DEMO_GLB
+            price:"330", unit:"pour 2", alg:[2,4,14]
           },
         ]
       },
@@ -522,7 +459,7 @@ const CHAPTERS = [
           { name:"Crevette rouge<sup>*</sup> de Mazara au miel de châtaigne BIO", desc:"poireaux frits", price:"39", alg:[7,14] },
           { name:"Charlotte di panella, crevette rouge<sup>*</sup> de Mazara", price:"32", alg:[14] },
           { name:"Salade de mer tiède", desc:"émulsion d'huile d'olive EVO Biancolilla, citron vert", price:"45", alg:[2,14] },
-          { name:"Le Grand Frit de Paranza", desc:"calamar, crevette*, poisson de roche", price:"42", alg:[2,4,14], model:DEMO_GLB },
+          { name:"Le Grand Frit de Paranza", desc:"calamar, crevette*, poisson de roche", price:"42", alg:[2,4,14] },
           { name:"Ceviche de poisson blanc", desc:"amandes d'Avola", price:"28", alg:[4,8] },
           { name:"Mediterranean Springroll", desc:"espadon* de Méditerranée, wakamé, poivre rose, sauce ponzu", price:"22", unit:"2 pièces", alg:[4] },
           { name:"Petite tourte aux cèpes", desc:"cœur fondant de Vastedda de la vallée du Belìce, velouté de Ragusano AOP au safran", price:"24", alg:[1,7,12] },
@@ -539,7 +476,7 @@ const CHAPTERS = [
       {
         title: "Tacos",
         items: [
-          { name:"Saumon", desc:"guacamole, citron vert confit", price:"20", unit:"2 pièces", alg:[4] },
+          { name:"Saumon", desc:"guacamole, citron vert confit", price:"20", unit:"2 pièces", alg:[4], splat:"tacos" },
           { name:"Thon", desc:"guacamole, perlage de truffe noire", price:"24", unit:"2 pièces", alg:[4] },
           { name:"Poisson blanc", desc:"guacamole, caviar d'anchois", price:"24", unit:"2 pièces", alg:[4] },
           { name:"Crevette rouge<sup>*</sup> de Mazara", desc:"guacamole, caviar Petrossian Oscietra Royal", price:"44", unit:"2 pièces", alg:[2] },
@@ -554,12 +491,12 @@ const CHAPTERS = [
       {
         title: "Pâtes & Risottos",
         items: [
-          { name:"Spaghetto alla chitarra Mancini", desc:"vongole, pois chiches, poutargue de thon de Favignana", price:"38", alg:[1,4,9,12,14] },
+          { name:"Spaghetto alla chitarra Mancini", desc:"vongole, pois chiches, poutargue de thon de Favignana", price:"38", alg:[1,4,9,12,14], splat:"pates" },
           { name:"Linguina Mancini", desc:"oursins, tomates datterino BIO, poutargue de thon de Favignana", price:"48", alg:[1,4,9,12,14] },
           { name:"Calamarata Mancini", desc:"ragoût d'espadon* de Méditerranée, tomate datterino BIO, aubergines fumées", price:"36", alg:[1,4,9,12] },
           { name:"Fregola BIO", desc:"galinette, graines de fenouil, macis", price:"35", unit:"pour 2", alg:[4,9,12] },
           { name:"Spaghetto alla chitarra Mancini", desc:"moules, tomates datterino BIO, cacio cavallo", price:"32", alg:[1,9,12,14] },
-          { name:"Risotto aux fruits de mer", price:"49", unit:"pour 2", alg:[1,2,4,9,12,14], model:DEMO_GLB },
+          { name:"Risotto aux fruits de mer", price:"49", unit:"pour 2", alg:[1,2,4,9,12,14] },
           { name:"Tonnarello frais trafilato al bronzo", desc:"homard bleu de Normandie", price:"49", alg:[1,2,9,12] },
           { name:"Spaghetto alla chitarra Mancini", desc:"loup, citron vert, piment", price:"34", alg:[1,4,9,12] },
           { name:"Mezzaluna de poisson blanc", desc:"velouté de moules, caviar Petrossian Oscietra Royal", price:"58", alg:[1,4,9,12,14] },
@@ -580,7 +517,7 @@ const CHAPTERS = [
           { name:"Turbot", desc:"pois chiches, vongole", price:"45", alg:[4,9,12,14] },
           { name:"Sériole façon Îles Éoliennes", price:"42", alg:[4,9,12] },
           { name:"Caciucco de poisson", desc:"crustacés*, fruits de mer", price:"49", alg:[2,4,14] },
-          { name:"Espadon<sup>*</sup> en croûte de pistache de Bronte", desc:"oignons rouges de Tropea caramélisés, aubergines fumées", price:"42", alg:[1,4,9,12], model:DEMO_GLB },
+          { name:"Espadon<sup>*</sup> en croûte de pistache de Bronte", desc:"oignons rouges de Tropea caramélisés, aubergines fumées", price:"42", alg:[1,4,9,12] },
           { name:"Pêche du jour", price:"20", unit:"/ 100 g", alg:[4] },
           { name:"Homard bleu de Normandie", price:"24", unit:"/ 100 g", alg:[2] },
           { name:"Langouste", price:"29", unit:"/ 100 g", alg:[2] },
@@ -621,9 +558,9 @@ const CHAPTERS = [
         title: "Desserts",
         items: [
           { name:"Millefeuille croquant", desc:"mousse de ricotta, copeaux de chocolat noir Modicano, orange amère", price:"18", alg:[1,7] },
-          { name:"Meringue flambée", desc:"crème chantilly, coulis de framboise, éponge de pistache de Bronte, fruits des bois", price:"20", alg:[3,7,8], model:DEMO_GLB },
+          { name:"Meringue flambée", desc:"crème chantilly, coulis de framboise, éponge de pistache de Bronte, fruits des bois", price:"20", alg:[3,7,8] },
           { name:"Tartelette au chocolat", desc:"crémeux de vanille Bourbon, pistache", price:"18", alg:[1,3,7,8] },
-          { name:"Cannolo Sicilien", price:"15", alg:[1,7], model:DEMO_GLB },
+          { name:"Cannolo Sicilien", price:"15", alg:[1,7], splat:"canolo" },
           { name:"Semifreddo du jour", price:"15", alg:[1,3,7,8] },
         ]
       },
@@ -682,12 +619,11 @@ function buildDish(item){
   name.innerHTML = item.name;
   head.appendChild(name);
 
-  if(item.model){
-    const badge = el("button","badge3d");
-    badge.type = "button";
+  if(item.splat){
+    const badge = el("a","badge3d");
+    badge.href = "salina-viewer.html?dish=" + item.splat;
     badge.setAttribute("aria-label", "Voir " + name.textContent.trim() + " en 3D");
     badge.innerHTML = '<span class="dot"></span>3D';
-    badge.addEventListener("click", () => openModal(item));
     head.appendChild(badge);
   }
 
@@ -804,76 +740,6 @@ function setupObservers(){
     document.querySelectorAll(".reveal").forEach(n => n.classList.add("in"));
   }
 }
-
-/* ============================================================
-   MODALE 3D
-   ============================================================ */
-const modal   = $("#modal");
-const stage   = $("#modalStage");
-let   viewer  = null;
-let   lastFocus = null;
-
-function ensureViewer(){
-  if(viewer) return viewer;
-  viewer = document.createElement("model-viewer");
-  viewer.setAttribute("camera-controls","");
-  viewer.setAttribute("auto-rotate","");
-  viewer.setAttribute("auto-rotate-delay","800");
-  viewer.setAttribute("rotation-per-second","18deg");
-  viewer.setAttribute("interaction-prompt","none");
-  viewer.setAttribute("shadow-intensity","1");
-  viewer.setAttribute("shadow-softness","0.9");
-  viewer.setAttribute("exposure","1.05");
-  viewer.setAttribute("environment-image","neutral");
-  viewer.setAttribute("ar","");
-  viewer.setAttribute("ar-modes","webxr scene-viewer quick-look");
-  viewer.setAttribute("loading","eager");
-
-  // barre de progression personnalisée
-  const bar = document.createElement("div");
-  bar.className = "progress-bar hide";
-  bar.setAttribute("slot","progress-bar");
-  bar.innerHTML = '<span class="fill"></span>';
-  viewer.appendChild(bar);
-  viewer.addEventListener("progress", (ev) => {
-    const f = bar.querySelector(".fill");
-    f.style.width = (ev.detail.totalProgress * 100) + "%";
-    bar.classList.toggle("hide", ev.detail.totalProgress === 1);
-  });
-  viewer.addEventListener("error", () => modal.classList.add("has-error"));
-
-  stage.insertBefore(viewer, stage.firstChild);
-  return viewer;
-}
-
-function openModal(item){
-  lastFocus = document.activeElement;
-  modal.classList.remove("has-error");
-  $("#modalTitle").innerHTML = item.name;
-  $("#modalPrice").textContent = fmtPrice(item.price) + (item.unit ? "  ·  " + item.unit : "");
-
-  // si model-viewer n'est pas chargé (CDN bloqué), affiche le repli
-  if(!customElements.get("model-viewer")){
-    modal.classList.add("has-error");
-  } else {
-    ensureViewer().setAttribute("src", item.model);
-  }
-
-  modal.classList.add("is-open");
-  document.body.style.overflow = "hidden";
-  $("#modalClose").focus();
-}
-
-function closeModal(){
-  modal.classList.remove("is-open");
-  document.body.style.overflow = "";
-  if(viewer) viewer.removeAttribute("src");   // libère la mémoire GPU
-  if(lastFocus) lastFocus.focus();
-}
-
-$("#modalClose").addEventListener("click", closeModal);
-modal.addEventListener("click", (e) => { if(e.target === modal) closeModal(); });
-document.addEventListener("keydown", (e) => { if(e.key === "Escape" && modal.classList.contains("is-open")) closeModal(); });
 
 /* ============================================================
    INIT
