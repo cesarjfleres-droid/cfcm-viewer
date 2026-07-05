@@ -62,7 +62,10 @@
       name: 'Cannolo Sicilien',
       price: '15 \u20ac',
       url: `${R2}/canolo.ply`,
-      euler: [-90, 0, 0],
+      // PLY brut du pipeline (sans transform SuperSplat) : dessus vers +Z
+      // → base identité, la mise à plat table (Rx -90) fait le reste.
+      // Validé sur canolo ; si un plat diffère : calibrer via &ex= &ey= &ez=
+      euler: [0, 0, 0],
       correction: [0, 0, 0],
       // centre = médiane du nuage (robuste aux floaters) — à affiner si besoin
       centre: [0.541, -0.517, -0.370],
@@ -77,7 +80,10 @@
       name: 'Spaghetto alla chitarra Mancini',
       price: '38 \u20ac',
       url: `${R2}/pates.ply`,
-      euler: [-90, 0, 0],
+      // PLY brut du pipeline (sans transform SuperSplat) : dessus vers +Z
+      // → base identité, la mise à plat table (Rx -90) fait le reste.
+      // Validé sur canolo ; si un plat diffère : calibrer via &ex= &ey= &ez=
+      euler: [0, 0, 0],
       correction: [0, 0, 0],
       centre: [0.371, -0.822, -0.891],
       scale: 3200,
@@ -91,7 +97,10 @@
       name: 'Tartare de Thon',
       price: '28 \u20ac',
       url: `${R2}/thon.ply`,
-      euler: [-90, 0, 0],
+      // PLY brut du pipeline (sans transform SuperSplat) : dessus vers +Z
+      // → base identité, la mise à plat table (Rx -90) fait le reste.
+      // Validé sur canolo ; si un plat diffère : calibrer via &ex= &ey= &ez=
+      euler: [0, 0, 0],
       correction: [0, 0, 0],
       centre: [-0.077, 0.303, -0.090],
       scale: 3300,
@@ -107,7 +116,10 @@
       url: `${R2}/tacos.ply`,
       // Nuage non recentré (repère COLMAP décalé) : centre mesuré loin de
       // l'origine, étendue plus grande → échelle plus faible. Le viewer compense.
-      euler: [-90, 0, 0],
+      // PLY brut du pipeline (sans transform SuperSplat) : dessus vers +Z
+      // → base identité, la mise à plat table (Rx -90) fait le reste.
+      // Validé sur canolo ; si un plat diffère : calibrer via &ex= &ey= &ez=
+      euler: [0, 0, 0],
       correction: [0, 0, 0],
       centre: [-31.657, -0.130, 9.214],
       scale: 800,

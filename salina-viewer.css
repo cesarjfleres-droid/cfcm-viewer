@@ -42,9 +42,9 @@ html, body {
   inset: 0;
   z-index: 1;
   background:
-    radial-gradient(ellipse 90% 60% at 50% -5%, rgba(111, 194, 207, 0.28), transparent 60%),
-    radial-gradient(ellipse 70% 45% at 100% 100%, rgba(224, 118, 79, 0.12), transparent 55%),
-    linear-gradient(180deg, #14497a 0%, var(--azure-deep) 45%, #071c2e 100%);
+    radial-gradient(ellipse 90% 60% at 50% -5%, rgba(15, 58, 94, 0.06), transparent 60%),
+    radial-gradient(ellipse 120% 50% at 50% 108%, rgba(15, 58, 94, 0.10), transparent 60%),
+    linear-gradient(180deg, #ffffff 0%, #fdfdfb 45%, #eef0ee 100%);
   opacity: 1;
   transition: opacity 0.45s ease;
 }
@@ -157,9 +157,9 @@ body.mode-ar #flip-btn { display: flex; }
   max-width: 60vw;
 }
 #dish-name {
-  font-family: var(--font-display);
+  font-family: 'Cormorant Garamond', Georgia, serif;
   font-style: italic;
-  font-size: 15px;
+  font-size: 17px;
   line-height: 1.25;
   color: #fff;
   white-space: nowrap;
