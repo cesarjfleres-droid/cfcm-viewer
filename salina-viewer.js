@@ -333,6 +333,30 @@
   app.start();
   await new Promise((r) => requestAnimationFrame(r));
   await new Promise((r) => requestAnimationFrame(r));
+
+  // ---------- 3ter. AUTO-CENTRAGE (mesuré, robuste aux PLY re-exportés) ----------
+  // Le centre pré-configuré peut devenir faux si le .ply est re-nettoyé ou
+  // re-uploadé sur R2. Ici on mesure la boîte englobante RÉELLE du splat
+  // chargé et on le recale sur l'origine (où se trouvent socle et ombre).
+  // Désactivable pour calibrer à l'ancienne : &auto=0
+  const AUTO_CENTRE = num('auto', 1);
+  if (AUTO_CENTRE) {
+    try {
+      const gs = splatEntity.gsplat;
+      const mi = gs && gs.instance && gs.instance.meshInstance;
+      const aabb = mi && mi.aabb;   // boîte englobante en coordonnées monde
+      if (aabb && isFinite(aabb.center.x)) {
+        const cWorld = aabb.center;
+        const p = splatEntity.getLocalPosition();  // pivot à l'origine → local = monde
+        splatEntity.setLocalPosition(
+          p.x - cWorld.x,
+          p.y - cWorld.y + SPLAT_LIFT_Y,
+          p.z - cWorld.z
+        );
+      }
+    } catch (e) { /* API indisponible → on garde le centrage par config */ }
+  }
+
   setProgress(100);
 
   // ---------- 4. MODE IMMERSIF (caméra, opt-in, non bloquant) ----------
