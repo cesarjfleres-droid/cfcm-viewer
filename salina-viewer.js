@@ -67,9 +67,8 @@
       // Validé sur canolo ; si un plat diffère : calibrer via &ex= &ey= &ez=
       euler: [0, 0, 0],
       correction: [0, 0, 0],
-      // centre = médiane du nuage (robuste aux floaters) — à affiner si besoin
-      centre: [0.541, -0.517, -0.370],
-      scale: 3150,
+      centre: [0.508, -0.531, -0.401],   // centre strict P3–P97, op ≥ 0.6
+      scale: 3400,
       camZ: 10000,
       lift: -450,
       yaw0: 0,
@@ -85,8 +84,8 @@
       // Validé sur canolo ; si un plat diffère : calibrer via &ex= &ey= &ez=
       euler: [0, 0, 0],
       correction: [0, 0, 0],
-      centre: [0.371, -0.822, -0.891],
-      scale: 3200,
+      centre: [0.360, -0.811, -0.933],   // centre strict
+      scale: 3430,
       camZ: 10000,
       lift: -450,
       yaw0: 0,
@@ -102,8 +101,8 @@
       // Validé sur canolo ; si un plat diffère : calibrer via &ex= &ey= &ez=
       euler: [0, 0, 0],
       correction: [0, 0, 0],
-      centre: [-0.077, 0.303, -0.090],
-      scale: 3300,
+      centre: [-0.060, 0.307, -0.084],   // centre strict
+      scale: 3620,
       camZ: 10000,
       lift: -450,
       yaw0: 0,
@@ -121,8 +120,8 @@
       // Validé sur canolo ; si un plat diffère : calibrer via &ex= &ey= &ez=
       euler: [0, 0, 0],
       correction: [0, 0, 0],
-      centre: [-31.657, -0.130, 9.214],
-      scale: 800,
+      centre: [-31.793, -0.203, 9.268],  // centre strict
+      scale: 740,
       camZ: 10000,
       lift: -450,
       yaw0: 0,
@@ -149,6 +148,9 @@
   const CORR_Y        = num('fy', dish.correction[1]);
   const CORR_Z        = num('fz', dish.correction[2]);
   const SPLAT_SCALE   = num('scale', dish.scale);
+  const CENTRE_X      = num('cx', dish.centre[0]);
+  const CENTRE_Y      = num('cy', dish.centre[1]);
+  const CENTRE_Z      = num('cz', dish.centre[2]);
   const CAM_Z_BASE    = num('camz', dish.camZ);   // distance caméra : inchangée (pas de zoom initial)
   const SPLAT_LIFT_Y  = num('lift', dish.lift);
 
@@ -294,7 +296,7 @@
   splatEntity.setLocalRotation(qFinal);
 
   // Centroïde local → monde : tourné (rotation finale) puis négué
-  const LOCAL_CENTRE = new pc.Vec3(dish.centre[0], dish.centre[1], dish.centre[2]);
+  const LOCAL_CENTRE = new pc.Vec3(CENTRE_X, CENTRE_Y, CENTRE_Z);
   const _scaled = new pc.Vec3(
     LOCAL_CENTRE.x * SPLAT_SCALE,
     LOCAL_CENTRE.y * SPLAT_SCALE,
@@ -303,6 +305,30 @@
   const _rotated = new pc.Vec3();
   qFinal.transformVector(_scaled, _rotated);
   splatEntity.setLocalPosition(-_rotated.x, -_rotated.y + SPLAT_LIFT_Y, -_rotated.z);
+
+  // ---------- 3bis. SOCLE CACHE-TROUS ----------
+  // Cylindre plat couleur assiette glissé juste SOUS le plat : invisible en
+  // temps normal (recouvert par les gaussiennes), il apparaît à travers les
+  // zones sans gaussiennes → les trous se fondent dans l'assiette au lieu
+  // de laisser voir le fond bleu. Solidaire du pivot : suit zoom/rotation.
+  // Calibration à chaud : &discr=1050 (rayon, 0 = désactivé) &discy=-40 (hauteur)
+  const discConf = dish.disc || {};
+  const DISC_R = num('discr', discConf.r !== undefined ? discConf.r : 1050);
+  const DISC_Y = num('discy', discConf.y !== undefined ? discConf.y : -40);
+  const DISC_H = discConf.h !== undefined ? discConf.h : 60;
+  if (DISC_R > 0) {
+    const discMat = new pc.StandardMaterial();
+    // sans éclairage dans la scène, seule la composante émissive rend :
+    // couleur constante et uniforme sous tous les angles (aucune face ombrée)
+    discMat.diffuse.set(0, 0, 0);
+    discMat.emissive.fromString(discConf.color || '#f0ede6');  // blanc assiette
+    discMat.update();
+    const socle = new pc.Entity('socle');
+    socle.addComponent('render', { type: 'cylinder', material: discMat });
+    pivot.addChild(socle);
+    socle.setLocalScale(DISC_R * 2, DISC_H, DISC_R * 2);
+    socle.setLocalPosition(0, SPLAT_LIFT_Y + DISC_Y, 0);
+  }
 
   app.start();
   await new Promise((r) => requestAnimationFrame(r));
