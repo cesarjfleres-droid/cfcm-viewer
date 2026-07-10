@@ -109,6 +109,20 @@
       yawRange: 360,
       elev0: 46, elevMin: 42, elevMax: 54, zoomMin: 0.55,
     },
+    tartare: {
+      name: 'Tartare',
+      price: '28 \u20ac',
+      url: `${R2}/tartare-2.ply`,
+      euler: [0, 0, 0],
+      correction: [0, 0, 0],
+      centre: [0, 0, 0],      // l'auto-pose mesure le vrai centre au chargement
+      scale: 3200,            // fallback si l'auto-pose échoue
+      camZ: 10000,
+      lift: -450,
+      yaw0: 0,
+      yawRange: 360,
+      elev0: 46, elevMin: 42, elevMax: 54, zoomMin: 0.55,
+    },
     tacos: {
       name: 'Tacos Saumon',
       price: '20 \u20ac',
@@ -272,17 +286,157 @@
   }
   setProgress(92);
 
+  // ---------- 3pre. AUTO-POSE : le viewer mesure le nuage lui-même ----------
+  // Les PLY sortent du pipeline sans nettoyage ni convention d'axes stable :
+  // orientation, centre et échelle changent à chaque re-export. Plutôt que de
+  // calibrer à la main, on lit les positions des gaussiennes chargées :
+  //  · plan dominant (covariance + Jacobi) = l'assiette → normale à aligner sur +Y
+  //  · signe de la normale : la nourriture est AU-DESSUS du plan
+  //  · centre = médiane des points opaques (robuste aux floaters)
+  //  · étendue → échelle et rayon du socle
+  // Prioritiés : URL > config du plat > mesure auto. &flip=1 retourne si le
+  // détecteur de dessus se trompe. Fallback silencieux si l'API est absente.
+  let AUTO = null;
+  try {
+    const res = splatAsset.resource;
+    const gd = res && (res.gsplatData || res.splatData);
+    const N = gd && gd.numSplats;
+    if (gd && gd.getProp && N > 500) {
+      const px = gd.getProp('x'), py = gd.getProp('y'), pz = gd.getProp('z');
+      const po = gd.getProp('opacity');   // logit
+      if (px && py && pz) {
+        // Échantillon de points opaques (≤ 30 000)
+        const stride = Math.max(1, Math.floor(N / 30000));
+        const xs = [], ys = [], zs = [];
+        for (let i = 0; i < N; i += stride) {
+          if (po) { const o = 1 / (1 + Math.exp(-po[i])); if (o < 0.6) continue; }
+          xs.push(px[i]); ys.push(py[i]); zs.push(pz[i]);
+        }
+        const n = xs.length;
+        if (n > 300) {
+          const med = (arr) => { const s = arr.slice().sort((a, b) => a - b); return s[s.length >> 1]; };
+          const pct = (sorted, p) => sorted[Math.min(sorted.length - 1, Math.max(0, Math.round(p * (sorted.length - 1))))];
+          const cx = med(xs), cy = med(ys), cz = med(zs);
+          // Covariance 3×3 centrée
+          let xx = 0, xy = 0, xz = 0, yy = 0, yz = 0, zz = 0;
+          for (let i = 0; i < n; i++) {
+            const dx = xs[i] - cx, dy = ys[i] - cy, dz = zs[i] - cz;
+            xx += dx * dx; xy += dx * dy; xz += dx * dz;
+            yy += dy * dy; yz += dy * dz; zz += dz * dz;
+          }
+          const A = [[xx / n, xy / n, xz / n], [xy / n, yy / n, yz / n], [xz / n, yz / n, zz / n]];
+          // Jacobi : vecteur propre de la plus petite valeur propre = normale du plan
+          const V = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+          for (let it = 0; it < 40; it++) {
+            let p = 0, q = 1;
+            if (Math.abs(A[0][2]) > Math.abs(A[p][q])) { p = 0; q = 2; }
+            if (Math.abs(A[1][2]) > Math.abs(A[p][q])) { p = 1; q = 2; }
+            if (Math.abs(A[p][q]) < 1e-12) break;
+            const th = (A[q][q] - A[p][p]) / (2 * A[p][q]);
+            const t = (th >= 0 ? 1 : -1) / (Math.abs(th) + Math.sqrt(th * th + 1));
+            const c = 1 / Math.sqrt(t * t + 1), s = t * c;
+            const app = A[p][p], aqq = A[q][q], apq = A[p][q];
+            A[p][p] = c * c * app - 2 * s * c * apq + s * s * aqq;
+            A[q][q] = s * s * app + 2 * s * c * apq + c * c * aqq;
+            A[p][q] = A[q][p] = 0;
+            for (let k = 0; k < 3; k++) {
+              if (k !== p && k !== q) {
+                const akp = A[k][p], akq = A[k][q];
+                A[k][p] = A[p][k] = c * akp - s * akq;
+                A[k][q] = A[q][k] = s * akp + c * akq;
+              }
+              const vkp = V[k][p], vkq = V[k][q];
+              V[k][p] = c * vkp - s * vkq;
+              V[k][q] = s * vkp + c * vkq;
+            }
+          }
+          let mi = 0;
+          if (A[1][1] < A[mi][mi]) mi = 1;
+          if (A[2][2] < A[mi][mi]) mi = 2;
+          let nx = V[0][mi], ny = V[1][mi], nz = V[2][mi];
+          const nl = Math.hypot(nx, ny, nz) || 1;
+          nx /= nl; ny /= nl; nz /= nl;
+          // Étendues et rayon (distances au centre, signées le long de la normale
+          // et radiales dans le plan)
+          const dsig = new Array(n), drad = new Array(n);
+          for (let i = 0; i < n; i++) {
+            const dx = xs[i] - cx, dy = ys[i] - cy, dz = zs[i] - cz;
+            const d = dx * nx + dy * ny + dz * nz;
+            dsig[i] = d;
+            const rx = dx - d * nx, ry = dy - d * ny, rz = dz - d * nz;
+            drad[i] = Math.hypot(rx, ry, rz);
+          }
+          const radS = drad.slice().sort((a, b) => a - b);
+          const radius = pct(radS, 0.95);            // rayon de l'assiette
+          // Dessus = côté de la NOURRITURE. Deux votes combinés :
+          //  1) couleur : les points saturés (nourriture) vs neutres (assiette/jupe)
+          //  2) masse   : points opaques dans le cylindre central de l'assiette
+          const band = radius * 0.9;
+          let aColor = 0, bColor = 0, aMass = 0, bMass = 0;
+          // couleurs SH0 → RGB (si présentes dans le fichier)
+          const r0 = gd.getProp('f_dc_0'), g0 = gd.getProp('f_dc_1'), b0 = gd.getProp('f_dc_2');
+          const sats = (r0 && g0 && b0) ? new Array(n) : null;
+          if (sats) {
+            let k = 0;
+            for (let i = 0; i < N; i += stride) {
+              if (po) { const o = 1 / (1 + Math.exp(-po[i])); if (o < 0.6) continue; }
+              const rr = 0.5 + 0.2820948 * r0[i], gg = 0.5 + 0.2820948 * g0[i], bb = 0.5 + 0.2820948 * b0[i];
+              sats[k++] = Math.max(rr, gg, bb) - Math.min(rr, gg, bb);
+            }
+          }
+          const satThr = 0.14;
+          for (let i = 0; i < n; i++) {
+            const d = dsig[i], ad = Math.abs(d);
+            if (ad < 0.02 * band || ad > band) continue;
+            if (sats && sats[i] >= satThr && drad[i] < 0.7 * radius) {
+              if (d > 0) aColor++; else bColor++;
+            }
+            if (drad[i] < 0.55 * radius) {
+              if (d > 0) aMass++; else bMass++;
+            }
+          }
+          let score = 0;
+          if (aColor + bColor > 200) score += 2 * (aColor - bColor) / (aColor + bColor);
+          if (aMass + bMass > 200) score += (aMass - bMass) / (aMass + bMass);
+          if (score < 0) { nx = -nx; ny = -ny; nz = -nz; }
+          if (num('flip', 0)) { nx = -nx; ny = -ny; nz = -nz; }
+          // Quaternion normale → +Y (from-to)
+          let qAuto;
+          const dot = ny;
+          if (dot > 0.99999) qAuto = new pc.Quat();
+          else if (dot < -0.99999) qAuto = new pc.Quat().setFromAxisAngle(new pc.Vec3(1, 0, 0), 180);
+          else {
+            const ax = new pc.Vec3(-nz, 0, nx).normalize();  // n × up
+            qAuto = new pc.Quat().setFromAxisAngle(ax, Math.acos(dot) * 180 / Math.PI);
+          }
+          AUTO = {
+            quat: qAuto,
+            centre: [cx, cy, cz],
+            radius: radius,
+            extent: radius * 2,
+          };
+        }
+      }
+    }
+  } catch (e) { console.warn('Auto-pose indisponible, calibration config utilisée', e); }
+
   // ---------- 3. COMPOSITION : base + CORRECTION + MISE À PLAT TABLE ----------
   // qFinal = table ∘ correction ∘ base.
   //  - base + correction : orientent le dessus du plat vers la caméra (+Z), validé.
   //  - table (Rx -90°)   : couche ensuite le plat à plat, dessus vers le haut (+Y),
   //    horizontal et stable, prêt à être vu en plongée. rotation X/Z finales = 0.
   // Le centroïde est transformé par la MÊME rotation finale → plat centré.
-  const qBase  = new pc.Quat().setFromEulerAngles(SPLAT_EULER_X, SPLAT_EULER_Y, SPLAT_EULER_Z);
   const qCorr  = new pc.Quat().setFromEulerAngles(CORR_X, CORR_Y, CORR_Z);
-  const qTable = new pc.Quat().setFromEulerAngles(-90, 0, 0);
-  const qFinal = new pc.Quat().mul2(qCorr, qBase);
-  qFinal.mul2(qTable, qFinal);
+  let qFinal;
+  if (AUTO) {
+    // qAuto pose déjà l'assiette à plat (normale → +Y) ; fx/fy/fz = retouche
+    qFinal = new pc.Quat().mul2(qCorr, AUTO.quat);
+  } else {
+    const qBase  = new pc.Quat().setFromEulerAngles(SPLAT_EULER_X, SPLAT_EULER_Y, SPLAT_EULER_Z);
+    const qTable = new pc.Quat().setFromEulerAngles(-90, 0, 0);
+    qFinal = new pc.Quat().mul2(qCorr, qBase);
+    qFinal.mul2(qTable, qFinal);
+  }
 
   const pivot = new pc.Entity('pivot');
   app.root.addChild(pivot);
@@ -292,15 +446,21 @@
   splatEntity.addComponent('gsplat', { asset: splatAsset });
   pivot.addChild(splatEntity);
 
-  splatEntity.setLocalScale(SPLAT_SCALE, SPLAT_SCALE, SPLAT_SCALE);
+  const SCALE_EFF = Number.isFinite(num('scale', NaN)) ? num('scale', NaN)
+                  : (AUTO ? 2250 / AUTO.extent : SPLAT_SCALE);
+  splatEntity.setLocalScale(SCALE_EFF, SCALE_EFF, SCALE_EFF);
   splatEntity.setLocalRotation(qFinal);
 
   // Centroïde local → monde : tourné (rotation finale) puis négué
-  const LOCAL_CENTRE = new pc.Vec3(CENTRE_X, CENTRE_Y, CENTRE_Z);
+  const LOCAL_CENTRE = new pc.Vec3(
+    Number.isFinite(num('cx', NaN)) ? num('cx', NaN) : (AUTO ? AUTO.centre[0] : CENTRE_X),
+    Number.isFinite(num('cy', NaN)) ? num('cy', NaN) : (AUTO ? AUTO.centre[1] : CENTRE_Y),
+    Number.isFinite(num('cz', NaN)) ? num('cz', NaN) : (AUTO ? AUTO.centre[2] : CENTRE_Z)
+  );
   const _scaled = new pc.Vec3(
-    LOCAL_CENTRE.x * SPLAT_SCALE,
-    LOCAL_CENTRE.y * SPLAT_SCALE,
-    LOCAL_CENTRE.z * SPLAT_SCALE
+    LOCAL_CENTRE.x * SCALE_EFF,
+    LOCAL_CENTRE.y * SCALE_EFF,
+    LOCAL_CENTRE.z * SCALE_EFF
   );
   const _rotated = new pc.Vec3();
   qFinal.transformVector(_scaled, _rotated);
@@ -313,8 +473,11 @@
   // de laisser voir le fond bleu. Solidaire du pivot : suit zoom/rotation.
   // Calibration à chaud : &discr=1050 (rayon, 0 = désactivé) &discy=-40 (hauteur)
   const discConf = dish.disc || {};
-  const DISC_R = num('discr', discConf.r !== undefined ? discConf.r : 1050);
-  const DISC_Y = num('discy', discConf.y !== undefined ? discConf.y : -40);
+  // Rayon auto : 88 % du rayon d'assiette mesuré → reste caché sous les bords
+  const autoR = AUTO ? AUTO.radius * SCALE_EFF * 0.88 : 1050;
+  const autoY = AUTO ? -Math.max(35, AUTO.radius * SCALE_EFF * 0.06) : -40;
+  const DISC_R = num('discr', discConf.r !== undefined ? discConf.r : autoR);
+  const DISC_Y = num('discy', discConf.y !== undefined ? discConf.y : autoY);
   const DISC_H = discConf.h !== undefined ? discConf.h : 60;
   if (DISC_R > 0) {
     const discMat = new pc.StandardMaterial();
@@ -333,29 +496,6 @@
   app.start();
   await new Promise((r) => requestAnimationFrame(r));
   await new Promise((r) => requestAnimationFrame(r));
-
-  // ---------- 3ter. AUTO-CENTRAGE (mesuré, robuste aux PLY re-exportés) ----------
-  // Le centre pré-configuré peut devenir faux si le .ply est re-nettoyé ou
-  // re-uploadé sur R2. Ici on mesure la boîte englobante RÉELLE du splat
-  // chargé et on le recale sur l'origine (où se trouvent socle et ombre).
-  // Désactivable pour calibrer à l'ancienne : &auto=0
-  const AUTO_CENTRE = num('auto', 1);
-  if (AUTO_CENTRE) {
-    try {
-      const gs = splatEntity.gsplat;
-      const mi = gs && gs.instance && gs.instance.meshInstance;
-      const aabb = mi && mi.aabb;   // boîte englobante en coordonnées monde
-      if (aabb && isFinite(aabb.center.x)) {
-        const cWorld = aabb.center;
-        const p = splatEntity.getLocalPosition();  // pivot à l'origine → local = monde
-        splatEntity.setLocalPosition(
-          p.x - cWorld.x,
-          p.y - cWorld.y + SPLAT_LIFT_Y,
-          p.z - cWorld.z
-        );
-      }
-    } catch (e) { /* API indisponible → on garde le centrage par config */ }
-  }
 
   setProgress(100);
 
