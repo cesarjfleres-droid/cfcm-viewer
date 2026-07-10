@@ -416,7 +416,7 @@
           }
           // Point le plus bas du nuage le long de la normale (le socle ira dessous)
           const sigS = dsig.slice().sort((a, b) => a - b);
-          const dLow = pct(sigS, 0.01);
+          const dLow = pct(sigS, 0.005);
           // Étendues le long des 2 axes du plan (P3–P97) pour le socle rectangulaire
           const p1 = new Array(n), p2 = new Array(n);
           for (let i = 0; i < n; i++) {
@@ -496,12 +496,12 @@
   // (dimensionné et orienté sur les axes mesurés du plat).
   // Calibration : &discr= (rayon/demi-longueur, 0 = désactivé) &discy= (hauteur)
   const discConf = dish.disc || {};
-  const GAP = 25;
+  const GAP = 75;   // marge sous le point le plus bas du nuage
   const autoY = AUTO ? AUTO.dLow * SCALE_EFF - GAP : -60;
   const DISC_Y = num('discy', discConf.y !== undefined ? discConf.y : autoY);
   const DISC_H = discConf.h !== undefined ? discConf.h : 60;
   const isBox = discConf.shape === 'box';
-  const autoR = AUTO ? AUTO.radius * SCALE_EFF * 0.88 : 1050;
+  const autoR = AUTO ? AUTO.radius * SCALE_EFF * 0.84 : 1050;
   const DISC_R = num('discr', discConf.r !== undefined ? discConf.r : autoR);
   if (DISC_R > 0) {
     const discMat = new pc.StandardMaterial();
@@ -513,8 +513,8 @@
     pivot.addChild(socle);
     if (isBox && AUTO) {
       // Rectangle aux mesures du plat, aligné sur son grand axe
-      const L = num('discl', AUTO.ext1 * SCALE_EFF * 0.9);
-      const W = num('discw', AUTO.ext2 * SCALE_EFF * 0.9);
+      const L = num('discl', AUTO.ext1 * SCALE_EFF * 0.86);
+      const W = num('discw', AUTO.ext2 * SCALE_EFF * 0.86);
       socle.setLocalScale(L, DISC_H, W);
       const a1 = new pc.Vec3(AUTO.axis1[0], AUTO.axis1[1], AUTO.axis1[2]);
       const a1w = new pc.Vec3();
