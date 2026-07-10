@@ -17,24 +17,24 @@
  *  · Zoom min resserré (0.8) : plus de gros plan dans la frange.
  *  · Inertie conservée, s'arrête en douceur aux limites.
  *
- * v29 — SOCLE CACHE-TROUS REFONDU (auto, aucun réglage par fichier) :
- *  · Correctif : quand le détecteur de dessus retourne le plat (ou &flip=1),
- *    les hauteurs mesurées sont retournées avec → le "point le plus bas"
- *    n'est plus jamais mesuré du mauvais côté.
+ * v29 — auto-pose durcie (conservée) :
+ *  · Correctif flip : les hauteurs suivent le retournement de la normale.
  *  · CŒUR DU PLAT : profil de densité le long des axes du plan → la table
- *    autour (scan tacos) est exclue des mesures ; recentrage + échelle sur
- *    le cœur seulement quand du contexte est détecté.
- *  · SOCLE : posé nettement SOUS le P1 des hauteurs du cœur (marge ∝ rayon),
- *    taille bornée par la géométrie caméra (jamais hors du contour à
- *    l'élévation min) ET dimensionnée sur les trous réellement détectés
- *    (carte d'occupation 18×18). Rectangle mesuré/orienté sur le cœur
- *    pour les plateaux (dish.disc.shape === 'box').
+ *    autour (scan tacos) est exclue ; recentrage + échelle calés sur le
+ *    cœur seulement quand du contexte est détecté.
+ *
+ * v30 — STUDIO BLANC, PLAT VEDETTE :
+ *  · SOCLE SUPPRIMÉ : le volume cache-trous créait des artefacts
+ *    (perçages, plaques blanches). Le fond studio passe au BLANC (CSS) :
+ *    les trous du scan se fondent dans l'assiette, zéro géométrie ajoutée.
+ *  · PLAT PLUS GRAND : cadrage auto 2250 → 2700 (+20 %).
+ *  · PLAT PLUS HAUT : point de visée abaissé (looky 1400 → 200) → le plat
+ *    remonte vers le centre de l'écran, dégagé des boutons du bas.
+ *  · DÉZOOM BRIDÉ : ZOOM_MAX 1.7 → 1.2, le plat reste toujours dominant.
  *
  * Calibration sans redéployer :
  *   ?dish=plat1&yaw0=35&yawr=45&elev=38&elevmin=30&elevmax=52
- *   &looky=1400  + ex/ey/ez, fx/fy/fz, scale, camz, lift
- *   Socle : &discr= (rayon, 0=off) &discy= (centre Y) &discl=/&discw=
- *   (L/l rectangle) &discgap= (marge sous le nuage) &disch= (épaisseur)
+ *   &looky=200  + ex/ey/ez, fx/fy/fz, scale, camz, lift, zoommin
  * ============================================================ */
 (async function main() {
   const $ = (id) => document.getElementById(id);
@@ -194,13 +194,13 @@
   const CAM_ELEV_DEG  = num('elev', dish.elev0 ?? 40);       // angle vedette vertical
   const ELEV_MIN_DEG  = num('elevmin', dish.elevMin ?? 37);  // plancher : jamais rasant, jamais le dessous
   const ELEV_MAX_DEG  = num('elevmax', dish.elevMax ?? 48);  // plafond : jamais de zénith écrasé
-  const LOOK_Y        = num('looky', 1400);       // point de visée au-dessus du plat (~62 %)
+  const LOOK_Y        = num('looky', 200);        // v30 : visée basse → plat quasi centré, dégagé des boutons
   const YAW_START     = num('yaw0', dish.yaw0);   // angle vedette horizontal au chargement
   const YAW_RANGE     = num('yawr', dish.yawRange); // rotation autorisée : ± autour de l'angle vedette
 
   const FOV_Y = 50;
   const ZOOM_MIN = num('zoommin', dish.zoomMin ?? 0.55);  // v28 : gros plan profond rétabli
-  const ZOOM_MAX = 1.7;
+  const ZOOM_MAX = num('zoommax', 1.2);   // v30 : dézoom bridé, le plat reste dominant
 
   // Fiche plat dans l'UI
   $('dish-name').textContent = dish.name;
@@ -627,8 +627,9 @@
   pivot.addChild(splatEntity);
 
   const SCALE_EFF = Number.isFinite(num('scale', NaN)) ? num('scale', NaN)
-                  : (AUTO ? 2250 / AUTO.extent : SPLAT_SCALE);
+                  : (AUTO ? 2700 / AUTO.extent : SPLAT_SCALE);
   splatEntity.setLocalScale(SCALE_EFF, SCALE_EFF, SCALE_EFF);
+  console.info('[cadrage v30]', dishKey, '| scale =', Math.round(SCALE_EFF), AUTO ? ('| extent = ' + AUTO.extent.toFixed(2) + ' | coreOK = ' + AUTO.coreOK) : '| auto off');
   splatEntity.setLocalRotation(qFinal);
 
   // Centroïde local → monde : tourné (rotation finale) puis négué
@@ -646,120 +647,11 @@
   qFinal.transformVector(_scaled, _rotated);
   splatEntity.setLocalPosition(-_rotated.x, -_rotated.y + SPLAT_LIFT_Y, -_rotated.z);
 
-  // ---------- 3bis. SOCLE CACHE-TROUS (v29) ----------
-  // Volume couleur assiette glissé SOUS le plat : il apparaît à travers les
-  // zones sans gaussiennes → les trous se fondent dans l'assiette au lieu de
-  // laisser voir le fond bleu. Règles v29 :
-  //  · HAUTEUR : nettement sous le P1 des hauteurs du CŒUR (marge ∝ rayon du
-  //    plat) → vrai espace libre, plus aucun perçage, même dans les bols creux.
-  //  · TAILLE : résolue entre deux contraintes de la géométrie caméra à
-  //    l'élévation MIN autorisée :
-  //      plafond : bord_du_plat − profondeur/tan(élév) → jamais visible hors
-  //                du contour du plat, sous aucun angle/zoom permis ;
-  //      besoin  : trou_le_plus_excentré + profondeur/tan(élév) → chaque trou
-  //                détecté (carte d'occupation) reste bouché.
-  //    En cas de conflit, la marge est réduite pas à pas (plancher conservé)
-  //    et un warning est loggué.
-  //  · FORME : cylindre par défaut ; rectangle mesuré et orienté sur le CŒUR
-  //    du plat (table exclue) si dish.disc.shape === 'box' (plateau tacos).
-  // Calibration : &discr= (rayon, 0 = désactivé) &discy= (centre Y)
-  // &discl=/&discw= (L/l rectangle) &discgap= (marge) &disch= (épaisseur)
-  const discConf = dish.disc || {};
-  const isBox = discConf.shape === 'box';
-  const tanElev = Math.tan(Math.max(20, ELEV_MIN_DEG) * Math.PI / 180);
-
-  // Fallbacks si l'auto-mesure est indisponible
-  let autoR = 1050, autoL = 0, autoW = 0, autoH = 60, autoCY = -60;
-
-  if (AUTO && AUTO.coreOK) {
-    const S = SCALE_EFF;
-    const halfA = AUTO.coreH1 * S;          // demi-longueur monde (grand axe)
-    const halfB = AUTO.coreH2 * S;          // demi-largeur monde (petit axe)
-    const rSil  = Math.min(halfA, halfB);   // côté le plus contraint (silhouette)
-    const lowY  = AUTO.coreLow * S;         // vrai point bas du cœur (P1)
-    const rimY  = AUTO.coreRim * S;         // bas du bord visible du plat
-    const bowl  = Math.max(0, rimY - lowY); // profondeur assiette/bol
-    const pad   = 0.06 * rSil;              // quantification de la carte des trous
-
-    autoH = Math.min(70, Math.max(30, 0.05 * rSil));
-    let gap = num('discgap', Math.max(0.09 * rSil, 60));   // grosse marge par défaut
-    const gapFloor = Math.max(45, 0.04 * rSil);
-
-    const geom = (g) => {
-      const top = lowY - g;
-      const bottom = top - autoH;
-      const shrink = (rimY - bottom) / tanElev;   // retrait pour rester dans le contour
-      const reach  = (g + 0.35 * bowl) / tanElev; // portée des rayons à travers les trous
-      return {
-        top: top,
-        capA: (halfA - shrink) * 0.97,
-        capB: (halfB - shrink) * 0.97,
-        needA: AUTO.holeA * S + reach + pad,
-        needB: AUTO.holeB * S + reach + pad,
-        needR: AUTO.holeR * S + reach + pad,
-      };
-    };
-    let gm = geom(gap);
-    let guard = 0;
-    while (guard++ < 8 && gap > gapFloor &&
-           (isBox ? (gm.capA < gm.needA || gm.capB < gm.needB) : (gm.capB < gm.needR))) {
-      gap = Math.max(gapFloor, gap * 0.8);
-      gm = geom(gap);
-    }
-    autoCY = gm.top - autoH / 2;
-    const fit = (need, cap, mini) => Math.max(mini, Math.min(need, Math.max(cap, mini)));
-    if (isBox) {
-      autoL = 2 * fit(gm.needA, gm.capA, 0.45 * halfA);
-      autoW = 2 * fit(gm.needB, gm.capB, 0.45 * halfB);
-      autoR = autoL / 2;
-      if (gm.capA < gm.needA || gm.capB < gm.needB) {
-        console.warn('[socle v29] plafond silhouette atteint (rectangle) : couverture partielle des trous');
-      }
-    } else {
-      autoR = fit(gm.needR, gm.capB, 0.45 * rSil);
-      if (gm.capB < gm.needR) {
-        console.warn('[socle v29] plafond silhouette atteint : couverture partielle des trous');
-      }
-    }
-    console.info('[socle v29]', isBox ? 'rectangle' : 'disque',
-      '| dims =', Math.round(isBox ? autoL : autoR * 2), isBox ? ('x ' + Math.round(autoW)) : '',
-      '| topY =', Math.round(gm.top), '| gap =', Math.round(gap),
-      '| lowY =', Math.round(lowY), '| rimY =', Math.round(rimY),
-      '| trous R/A/B =', Math.round(AUTO.holeR * S) + '/' + Math.round(AUTO.holeA * S) + '/' + Math.round(AUTO.holeB * S));
-  } else if (AUTO) {
-    // Auto-pose OK mais cœur non mesurable : conservateur, priorité zéro perçage
-    autoCY = AUTO.dLow * SCALE_EFF - 110 - autoH / 2;
-    autoR = AUTO.radius * SCALE_EFF * 0.62;
-  }
-
-  const DISC_H = num('disch', discConf.h !== undefined ? discConf.h : autoH);
-  const DISC_Y = num('discy', discConf.y !== undefined ? discConf.y : autoCY);
-  const DISC_R = num('discr', discConf.r !== undefined ? discConf.r : autoR);
-  if (DISC_R > 0) {
-    const discMat = new pc.StandardMaterial();
-    discMat.diffuse.set(0, 0, 0);
-    discMat.emissive.fromString(discConf.color || '#f0ede6');
-    discMat.update();
-    const socle = new pc.Entity('socle');
-    socle.addComponent('render', { type: isBox ? 'box' : 'cylinder', material: discMat });
-    pivot.addChild(socle);
-    if (isBox) {
-      // Rectangle aux mesures du CŒUR du plat, aligné sur son grand axe
-      const L = num('discl', autoL > 0 ? autoL : DISC_R * 2);
-      const W = num('discw', autoW > 0 ? autoW : DISC_R * 1.3);
-      socle.setLocalScale(L, DISC_H, W);
-      if (AUTO) {
-        const a1 = new pc.Vec3(AUTO.axis1[0], AUTO.axis1[1], AUTO.axis1[2]);
-        const a1w = new pc.Vec3();
-        qFinal.transformVector(a1, a1w);        // grand axe dans le repère monde
-        const yawDeg = Math.atan2(-a1w.z, a1w.x) * 180 / Math.PI;
-        socle.setLocalEulerAngles(0, yawDeg, 0);
-      }
-    } else {
-      socle.setLocalScale(DISC_R * 2, DISC_H, DISC_R * 2);
-    }
-    socle.setLocalPosition(0, SPLAT_LIFT_Y + DISC_Y, 0);
-  }
+  // ---------- 3bis. SOCLE : SUPPRIMÉ (v30) ----------
+  // Le volume cache-trous créait des artefacts visibles (perçages, plaques).
+  // Nouvelle stratégie : fond STUDIO BLANC (CSS) → les zones sans gaussiennes
+  // laissent voir le blanc, qui se fond naturellement dans l'assiette.
+  // Aucune géométrie ajoutée sous le plat.
 
   app.start();
   await new Promise((r) => requestAnimationFrame(r));
