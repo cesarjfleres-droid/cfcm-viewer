@@ -322,12 +322,23 @@
       const po = gd.getProp('opacity');   // logit
       if (px && py && pz) {
         // Échantillon de points opaques (≤ 30 000)
+        // v30.1 : les NaN/Inf (PLY splatfacto parfois corrompus) sont écartés,
+        // sinon une seule valeur empoisonne médianes et covariance → pose NaN
+        // → plat invisible. Le nettoyage définitif se fait côté pipeline
+        // (ply_cleaner.py) mais le viewer ne doit jamais casser pour ça.
         const stride = Math.max(1, Math.floor(N / 30000));
         const xs = [], ys = [], zs = [];
+        let dropped = 0;
         for (let i = 0; i < N; i += stride) {
-          if (po) { const o = 1 / (1 + Math.exp(-po[i])); if (o < 0.6) continue; }
-          xs.push(px[i]); ys.push(py[i]); zs.push(pz[i]);
+          const X = px[i], Y = py[i], Z = pz[i];
+          if (!Number.isFinite(X) || !Number.isFinite(Y) || !Number.isFinite(Z)) { dropped++; continue; }
+          if (po) {
+            const o = 1 / (1 + Math.exp(-po[i]));
+            if (!Number.isFinite(o) || o < 0.6) continue;
+          }
+          xs.push(X); ys.push(Y); zs.push(Z);
         }
+        if (dropped > 0) console.warn('[auto-pose] ' + dropped + ' points NaN/Inf ignorés — nettoyer le .ply avec ply_cleaner.py avant upload R2');
         const n = xs.length;
         if (n > 300) {
           const med = (arr) => { const s = arr.slice().sort((a, b) => a - b); return s[s.length >> 1]; };
