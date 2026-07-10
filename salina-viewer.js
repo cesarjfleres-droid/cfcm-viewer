@@ -127,6 +127,7 @@
       name: 'Tacos Saumon',
       price: '20 \u20ac',
       url: `${R2}/tacos.ply`,
+      disc: { shape: 'box' },   // plateau rectangulaire → socle assorti
       // Nuage non recentré (repère COLMAP décalé) : centre mesuré loin de
       // l'origine, étendue plus grande → échelle plus faible. Le viewer compense.
       // PLY brut du pipeline (sans transform SuperSplat) : dessus vers +Z
@@ -368,6 +369,10 @@
           }
           const radS = drad.slice().sort((a, b) => a - b);
           const radius = pct(radS, 0.95);            // rayon de l'assiette
+          // Axes principaux DANS le plan (grand axe i1, petit axe i2) — sert au socle rectangulaire
+          const idx = [0, 1, 2].filter((k) => k !== mi).sort((a, b) => A[b][b] - A[a][a]);
+          const e1 = [V[0][idx[0]], V[1][idx[0]], V[2][idx[0]]];
+          const e2 = [V[0][idx[1]], V[1][idx[1]], V[2][idx[1]]];
           // Dessus = côté de la NOURRITURE. Deux votes combinés :
           //  1) couleur : les points saturés (nourriture) vs neutres (assiette/jupe)
           //  2) masse   : points opaques dans le cylindre central de l'assiette
@@ -409,11 +414,26 @@
             const ax = new pc.Vec3(-nz, 0, nx).normalize();  // n × up
             qAuto = new pc.Quat().setFromAxisAngle(ax, Math.acos(dot) * 180 / Math.PI);
           }
+          // Point le plus bas du nuage le long de la normale (le socle ira dessous)
+          const sigS = dsig.slice().sort((a, b) => a - b);
+          const dLow = pct(sigS, 0.01);
+          // Étendues le long des 2 axes du plan (P3–P97) pour le socle rectangulaire
+          const p1 = new Array(n), p2 = new Array(n);
+          for (let i = 0; i < n; i++) {
+            const dx = xs[i] - cx, dy = ys[i] - cy, dz = zs[i] - cz;
+            p1[i] = dx * e1[0] + dy * e1[1] + dz * e1[2];
+            p2[i] = dx * e2[0] + dy * e2[1] + dz * e2[2];
+          }
+          const p1S = p1.sort((a, b) => a - b), p2S = p2.sort((a, b) => a - b);
           AUTO = {
             quat: qAuto,
             centre: [cx, cy, cz],
             radius: radius,
             extent: radius * 2,
+            dLow: dLow,
+            ext1: pct(p1S, 0.97) - pct(p1S, 0.03),
+            ext2: pct(p2S, 0.97) - pct(p2S, 0.03),
+            axis1: e1,
           };
         }
       }
@@ -467,29 +487,43 @@
   splatEntity.setLocalPosition(-_rotated.x, -_rotated.y + SPLAT_LIFT_Y, -_rotated.z);
 
   // ---------- 3bis. SOCLE CACHE-TROUS ----------
-  // Cylindre plat couleur assiette glissé juste SOUS le plat : invisible en
-  // temps normal (recouvert par les gaussiennes), il apparaît à travers les
-  // zones sans gaussiennes → les trous se fondent dans l'assiette au lieu
-  // de laisser voir le fond bleu. Solidaire du pivot : suit zoom/rotation.
-  // Calibration à chaud : &discr=1050 (rayon, 0 = désactivé) &discy=-40 (hauteur)
+  // Volume plat couleur assiette glissé SOUS le plat : invisible en temps
+  // normal, il apparaît à travers les zones sans gaussiennes → les trous se
+  // fondent dans l'assiette au lieu de laisser voir le fond bleu.
+  // Placé sous le POINT LE PLUS BAS mesuré du nuage : jamais collé au plat,
+  // jamais de perçage, même dans les assiettes creuses.
+  // Forme : cylindre par défaut, rectangle si dish.disc.shape === 'box'
+  // (dimensionné et orienté sur les axes mesurés du plat).
+  // Calibration : &discr= (rayon/demi-longueur, 0 = désactivé) &discy= (hauteur)
   const discConf = dish.disc || {};
-  // Rayon auto : 88 % du rayon d'assiette mesuré → reste caché sous les bords
-  const autoR = AUTO ? AUTO.radius * SCALE_EFF * 0.88 : 1050;
-  const autoY = AUTO ? -Math.max(35, AUTO.radius * SCALE_EFF * 0.06) : -40;
-  const DISC_R = num('discr', discConf.r !== undefined ? discConf.r : autoR);
+  const GAP = 25;
+  const autoY = AUTO ? AUTO.dLow * SCALE_EFF - GAP : -60;
   const DISC_Y = num('discy', discConf.y !== undefined ? discConf.y : autoY);
   const DISC_H = discConf.h !== undefined ? discConf.h : 60;
+  const isBox = discConf.shape === 'box';
+  const autoR = AUTO ? AUTO.radius * SCALE_EFF * 0.88 : 1050;
+  const DISC_R = num('discr', discConf.r !== undefined ? discConf.r : autoR);
   if (DISC_R > 0) {
     const discMat = new pc.StandardMaterial();
-    // sans éclairage dans la scène, seule la composante émissive rend :
-    // couleur constante et uniforme sous tous les angles (aucune face ombrée)
     discMat.diffuse.set(0, 0, 0);
-    discMat.emissive.fromString(discConf.color || '#f0ede6');  // blanc assiette
+    discMat.emissive.fromString(discConf.color || '#f0ede6');
     discMat.update();
     const socle = new pc.Entity('socle');
-    socle.addComponent('render', { type: 'cylinder', material: discMat });
+    socle.addComponent('render', { type: isBox ? 'box' : 'cylinder', material: discMat });
     pivot.addChild(socle);
-    socle.setLocalScale(DISC_R * 2, DISC_H, DISC_R * 2);
+    if (isBox && AUTO) {
+      // Rectangle aux mesures du plat, aligné sur son grand axe
+      const L = num('discl', AUTO.ext1 * SCALE_EFF * 0.9);
+      const W = num('discw', AUTO.ext2 * SCALE_EFF * 0.9);
+      socle.setLocalScale(L, DISC_H, W);
+      const a1 = new pc.Vec3(AUTO.axis1[0], AUTO.axis1[1], AUTO.axis1[2]);
+      const a1w = new pc.Vec3();
+      qFinal.transformVector(a1, a1w);          // grand axe dans le repère monde
+      const yawDeg = Math.atan2(-a1w.z, a1w.x) * 180 / Math.PI;
+      socle.setLocalEulerAngles(0, yawDeg, 0);
+    } else {
+      socle.setLocalScale(DISC_R * 2, DISC_H, DISC_R * 2);
+    }
     socle.setLocalPosition(0, SPLAT_LIFT_Y + DISC_Y, 0);
   }
 
