@@ -134,6 +134,8 @@
       scale: 3200,            // fallback si l'auto-pose échoue
       camZ: 10000,
       lift: -450,
+      flip: 1,                // le vote dessus/dessous se trompe sur ce scan
+                              // (contenant transparent) → retournement forcé
       yaw0: 0,
       yawRange: 360,
       elev0: 46, elevMin: 42, elevMax: 54, zoomMin: 0.55,
@@ -434,7 +436,7 @@
           // côté → socle mal placé (cause historique des perçages).
           let flipped = false;
           if (score < 0) flipped = !flipped;
-          if (num('flip', 0)) flipped = !flipped;
+          if (num('flip', dish.flip || 0)) flipped = !flipped;   // URL > config plat > vote auto
           if (flipped) {
             nx = -nx; ny = -ny; nz = -nz;
             for (let i = 0; i < n; i++) dsig[i] = -dsig[i];
