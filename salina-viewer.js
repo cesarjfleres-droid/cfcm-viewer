@@ -125,8 +125,8 @@
       elev0: 46, elevMin: 42, elevMax: 54, zoomMin: 0.55,
     },
     tartare: {
-      name: 'Tartare',
-      price: '28 \u20ac',
+      name: 'Tartare de Saumon',
+      price: '26 \u20ac',
       url: `${R2}/tartare-2.ply`,
       euler: [0, 0, 0],
       correction: [0, 0, 0],
