@@ -279,7 +279,7 @@
     thon: {
       name: 'Thon',
       price: '28 €',
-      ply: R2 + '/thon.ply',            // PLY d'origine (le nettoyage coûtait des détails)
+      ply: R2 + '/thon2.ply',           // PLY nettoyé (nom neuf : aucun cache possible)
       // Orientation : gérée par la mise à plat automatique (plan du dressage
       // aligné sur l'assiette). Retouche éventuelle : &ex= &ey= &ez= &flip=1
       euler: [0, 0, 0],
@@ -290,7 +290,8 @@
         floorRatio: -0.0004,         // fond intérieur du bol ÷ diamètre (mesuré)
         foodRatio: 0.36,  // largeur dressage ÷ diamètre assiette → &fr=
         depth: 0.05,      // (repli si le GLB ne charge pas)      → &pdepth=
-        sink: 0.14,       // enfoncement du dressage dans le creux → &sink=
+        sink: 0.30,       // enfoncement : enterre la bavure de reconstruction
+                          // sous la surface opaque de l'assiette → &sink=
         color: [0.97, 0.96, 0.95],
       },
     },
