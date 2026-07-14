@@ -189,11 +189,13 @@
       name: 'Thon',
       price: '28 €',
       ply: R2 + '/thon.ply',            // nourriture seule (nettoyée SuperSplat)
+      // Assiette GÉNÉRÉE PAR LE VIEWER (aucun fichier à héberger).
+      // Elle se dimensionne toute seule sur la largeur de la nourriture.
       plate: {
-        glb: R2 + '/assiette.glb',
-        dia: 2600,        // diamètre de l'assiette dans la scène   → &pdia=
-        foodRatio: 0.52,  // largeur nourriture ÷ diamètre assiette → &fr=
-        sink: 0.10,       // enfoncement de la nourriture           → &sink=
+        foodRatio: 0.50,  // largeur nourriture ÷ diamètre assiette → &fr=
+        depth: 0.16,      // profondeur du creux ÷ diamètre         → &pdepth=
+        sink: 0.30,       // enfoncement de la nourriture dans le creux → &sink=
+        color: [0.93, 0.91, 0.87],
       },
     },
 
@@ -323,17 +325,6 @@
     return;
   }
 
-  // L'assiette est optionnelle : si elle échoue, le plat s'affiche quand même
-  let plateAsset = null;
-  if (dish.plate) {
-    try {
-      plateAsset = await loadAsset(dish.plate.glb, 'container', key + '-plate');
-      dbg('assiette chargée : ' + dish.plate.glb.split('/').pop(), 'ok');
-    } catch (e) {
-      dbg('ASSIETTE NON CHARGÉE → ' + dish.plate.glb, 'bad');
-      dbg('  (vérifier que le fichier existe bien sur R2)', 'bad');
-    }
-  }
   setProgress(94);
 
   /* ==========================================================
@@ -478,53 +469,81 @@
   dbg(`splat : échelle ${scale.toFixed(0)} · rotation auto ${autoRot ? 'oui' : 'non'}`);
 
   // Hauteur réelle du bas de la nourriture (après pose) : sert à poser l'assiette
-  let foodBottom = -300, foodWidth = target;
+  let foodBottom = -300, foodWidth = target, foodHeight = target * 0.4;
   try {
     const aabb = splat.gsplat.instance.meshInstance.aabb;
     foodBottom = aabb.center.y - aabb.halfExtents.y;
     foodWidth = Math.max(aabb.halfExtents.x, aabb.halfExtents.z) * 2;
-    dbg(`nourriture : largeur ${foodWidth.toFixed(0)} · bas à y=${foodBottom.toFixed(0)}`);
+    foodHeight = aabb.halfExtents.y * 2;
+    dbg(`nourriture : largeur ${foodWidth.toFixed(0)} · hauteur ${foodHeight.toFixed(0)} · bas y=${foodBottom.toFixed(0)}`);
   } catch (e) { dbg('aabb splat indisponible, valeurs par défaut', 'bad'); }
 
   /* ==========================================================
-     7. Pose de l'assiette 3D
+     7. ASSIETTE GÉNÉRÉE (surface de révolution)
+     ----------------------------------------------------------
+     Un bol évasé construit en code : profil y = profondeur × (r/R)²
+     tourné autour de l'axe Y. Aucun fichier à héberger, aucun export
+     Blender à rater, et le maillage est parfait (aucun trou possible).
+     Dimensionné automatiquement sur la largeur mesurée de la nourriture.
+       &fr=      largeur nourriture ÷ diamètre assiette (défaut 0.50)
+       &pdepth=  profondeur du creux ÷ diamètre        (défaut 0.16)
+       &sink=    enfoncement de la nourriture          (défaut 0.30)
+       &pdia=    diamètre imposé   ·  &py= hauteur imposée
      ========================================================== */
-  if (plateAsset) {
-    const plate = plateAsset.resource.instantiateRenderEntity();
+  if (dish.plate) {
+    const cfg = dish.plate;
+    const DIA = num('pdia', foodWidth / num('fr', cfg.foodRatio || 0.5));
+    const R = DIA / 2;
+    const DEPTH = DIA * num('pdepth', cfg.depth !== undefined ? cfg.depth : 0.16);
+
+    const RINGS = 44, SEGS = 96;
+    const pos = [], nrm = [], idx = [];
+    for (let i = 0; i <= RINGS; i++) {
+      const t = i / RINGS;
+      const r = R * t;
+      const y = DEPTH * t * t;                 // profil du creux
+      const slope = 2 * DEPTH * t / R;         // dy/dr
+      const nl = Math.hypot(slope, 1);
+      for (let s = 0; s <= SEGS; s++) {
+        const a = (s / SEGS) * Math.PI * 2;
+        const ca = Math.cos(a), sa = Math.sin(a);
+        pos.push(r * ca, y, r * sa);
+        nrm.push(-slope * ca / nl, 1 / nl, -slope * sa / nl);
+      }
+    }
+    for (let i = 0; i < RINGS; i++) {
+      for (let s = 0; s < SEGS; s++) {
+        const a = i * (SEGS + 1) + s, b = a + SEGS + 1;
+        idx.push(a, b, a + 1, a + 1, b, b + 1);
+      }
+    }
+
+    const mesh = new pc.Mesh(device);
+    mesh.setPositions(pos);
+    mesh.setNormals(nrm);
+    mesh.setIndices(idx);
+    mesh.update(pc.PRIMITIVE_TRIANGLES);
+
+    const mat = new pc.StandardMaterial();
+    const c0 = cfg.color || [0.93, 0.91, 0.87];
+    mat.diffuse = new pc.Color(c0[0], c0[1], c0[2]);
+    mat.gloss = 0.55;
+    mat.useMetalness = true;
+    mat.metalness = 0;
+    mat.cull = pc.CULLFACE_NONE;        // visible du dessus ET du dessous
+    mat.twoSidedLighting = true;
+    mat.update();
+
+    const plate = new pc.Entity('assiette');
+    plate.addComponent('render', { meshInstances: [new pc.MeshInstance(mesh, mat)] });
     pivot.addChild(plate);
 
-    // Taille réelle du mesh, mesurée (pas de valeur en dur)
-    const mis = [];
-    plate.findComponents('render').forEach((r) => r.meshInstances.forEach((m) => mis.push(m)));
-    if (!mis.length) {
-      dbg('assiette : aucun mesh dans le GLB !', 'bad');
-    } else {
-      const bb = mis[0].aabb.clone();
-      for (let i = 1; i < mis.length; i++) bb.add(mis[i].aabb);
-      const md = Math.max(bb.halfExtents.x, bb.halfExtents.z) * 2;   // diamètre
-      const s = num('pdia', dish.plate.dia) / md;
-      plate.setLocalScale(s, s, s);
+    // Le fond du creux se cale sous la nourriture, enfoncée de `sink`
+    const sink = num('sink', cfg.sink !== undefined ? cfg.sink : 0.30);
+    const y = num('py', foodBottom + foodHeight * sink);
+    plate.setLocalPosition(0, y, 0);
 
-      // Le creux de l'assiette accueille la nourriture : on remonte l'assiette
-      // pour que son bord haut arrive juste sous la nourriture, enfoncée de `sink`.
-      const topLocal = bb.center.y + bb.halfExtents.y;   // haut du mesh (bord)
-      const sink = num('sink', dish.plate.sink);
-      const y = num('py', foodBottom + foodWidth * sink - topLocal * s);
-      plate.setLocalPosition(0, y, 0);
-
-      // Matériau porcelaine (garanti, quel que soit l'export Blender)
-      const mat = new pc.StandardMaterial();
-      mat.diffuse = new pc.Color(0.93, 0.91, 0.87);
-      mat.gloss = 0.62;
-      mat.metalness = 0;
-      mat.useMetalness = true;
-      mat.twoSidedLighting = true;
-      mat.cull = pc.CULLFACE_NONE;   // l'intérieur du creux reste visible
-      mat.update();
-      mis.forEach((m) => { m.material = mat; });
-
-      dbg(`assiette : ø mesh ${md.toFixed(2)} → échelle ${s.toFixed(1)} · y=${y.toFixed(0)}`, 'ok');
-    }
+    dbg(`assiette générée : ø ${DIA.toFixed(0)} · creux ${DEPTH.toFixed(0)} · y=${y.toFixed(0)}`, 'ok');
   }
 
   /* ==========================================================
