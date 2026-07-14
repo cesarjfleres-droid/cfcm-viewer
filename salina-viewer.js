@@ -547,7 +547,10 @@
       const floorTarget = foodBottomY + foodExt * sink;
       const plateY = num('py', floorTarget - (P.meshFloorY || 0) * sP);
       plateEnt.setLocalPosition(0, plateY, 0);
-    } catch (e) { console.warn('Assiette GLB indisponible', e); }
+    } catch (e) {
+      console.error('ASSIETTE GLB NON CHARGÉE :', dish.plate.url, e);
+      showToast('Assiette 3D introuvable sur R2');
+    }
   }
 
   // ---------- 3bis. SOCLE CACHE-TROUS ----------
