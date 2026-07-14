@@ -191,13 +191,13 @@
       ply: R2 + '/thon.ply',            // PLY d'origine (le nettoyage coûtait des détails)
       // Retourné de 180° : le dressage se pose à l'endroit, et les halos de
       // reconstruction passent SOUS l'assiette, où elle les masque.
-      euler: [180, 0, 0],               // ajustable à chaud : &ex= &ey= &ez=
+      euler: [180, 180, 0],             // ajustable à chaud : &ex= &ey= &ez=
       // Assiette GÉNÉRÉE PAR LE VIEWER (aucun fichier à héberger).
       // Elle se dimensionne toute seule sur la largeur de la nourriture.
       plate: {
         foodRatio: 0.36,  // largeur dressage ÷ diamètre assiette → &fr=
         depth: 0.05,      // creux très faible (assiette plate)   → &pdepth=
-        sink: 0.02,       // léger enfoncement                    → &sink=
+        sink: 0.14,       // enfoncement du dressage dans le creux → &sink=
         color: [0.97, 0.96, 0.95],   // porcelaine blanche
       },
     },
