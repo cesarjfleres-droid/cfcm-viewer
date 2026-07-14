@@ -401,9 +401,14 @@
   /* ==========================================================
      4. Chargement du splat (.ply) + de l'assiette (.glb)
      ========================================================== */
+  // Cache-buster sur les modèles : R2 et le navigateur mettent les .ply/.glb
+  // en cache. Quand un modèle est remplacé sous le MÊME nom, il faut changer
+  // l'URL pour forcer le rechargement → &v=2, &v=3, etc.
+  const V = P.get('v') || '1';
+
   function loadAsset(url, type, name) {
     return new Promise((resolve, reject) => {
-      const asset = new pc.Asset(name, type, { url: url });
+      const asset = new pc.Asset(name, type, { url: `${url}?v=${V}` });
       asset.once('load', () => resolve(asset));
       asset.once('error', (e) => reject(new Error(String(e))));
       app.assets.add(asset);
@@ -417,7 +422,7 @@
   let splatAsset;
   try {
     splatAsset = await loadAsset(dish.ply, 'gsplat', key);
-    dbg('splat chargé : ' + dish.ply.split('/').pop(), 'ok');
+    dbg('splat chargé : ' + dish.ply.split('/').pop() + ' (v=' + V + ')', 'ok');
   } catch (e) {
     fatal("Le modèle 3D n'a pas pu être chargé."); 
     dbg('erreur splat : ' + dish.ply + ' → ' + e.message, 'bad');
