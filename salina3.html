@@ -454,11 +454,17 @@
   if (num('flip', 0)) q = new pc.Quat().mul2(new pc.Quat().setFromEulerAngles(180, 0, 0), q);
   splat.setLocalRotation(q);
 
-  // Échelle : en mode assiette, la nourriture est dimensionnée PAR RAPPORT à l'assiette
-  const target = dish.plate
-    ? num('pdia', dish.plate.dia) * num('fr', dish.plate.foodRatio)
-    : FOOD_SIZE;
-  const scale = num('scale', M ? target / M.extent : 3000);
+  // Échelle. FOOD_SIZE = largeur totale visée dans la scène.
+  //  · sans assiette : la nourriture occupe toute cette largeur
+  //  · avec assiette : c'est l'ASSIETTE qui l'occupe, la nourriture en fait
+  //    la fraction `fr` (le reste = le pourtour de l'assiette)
+  const FR = num('fr', (dish.plate && dish.plate.foodRatio) || 0.5);
+  const target = dish.plate ? FOOD_SIZE * FR : FOOD_SIZE;
+  let scale = num('scale', (M && M.extent > 0) ? target / M.extent : 3000);
+  if (!Number.isFinite(scale) || scale <= 0) {
+    scale = 3000;
+    dbg('échelle invalide → repli sur 3000', 'bad');
+  }
   splat.setLocalScale(scale, scale, scale);
 
   // Centrage : le centre mesuré est ramené à l'origine (rotation puis négation)
@@ -492,7 +498,7 @@
      ========================================================== */
   if (dish.plate) {
     const cfg = dish.plate;
-    const DIA = num('pdia', foodWidth / num('fr', cfg.foodRatio || 0.5));
+    const DIA = num('pdia', foodWidth / FR);
     const R = DIA / 2;
     const DEPTH = DIA * num('pdepth', cfg.depth !== undefined ? cfg.depth : 0.16);
 
