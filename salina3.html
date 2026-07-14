@@ -188,14 +188,14 @@
     thon: {
       name: 'Thon',
       price: '28 €',
-      ply: R2 + '/thon.ply',            // nourriture seule (nettoyée SuperSplat)
+      ply: R2 + '/thon-clean.ply',      // nourriture seule, floaters/halo supprimés
       // Assiette GÉNÉRÉE PAR LE VIEWER (aucun fichier à héberger).
       // Elle se dimensionne toute seule sur la largeur de la nourriture.
       plate: {
-        foodRatio: 0.50,  // largeur nourriture ÷ diamètre assiette → &fr=
-        depth: 0.16,      // profondeur du creux ÷ diamètre         → &pdepth=
-        sink: 0.30,       // enfoncement de la nourriture dans le creux → &sink=
-        color: [0.93, 0.91, 0.87],
+        foodRatio: 0.34,  // largeur nourriture ÷ diamètre assiette → &fr=
+        depth: 0.055,     // creux très faible (assiette plate)     → &pdepth=
+        sink: 0.22,       // enfoncement de la nourriture           → &sink=
+        color: [0.96, 0.95, 0.94],   // porcelaine blanche
       },
     },
 
