@@ -287,7 +287,7 @@
       // Elle se dimensionne toute seule sur la largeur de la nourriture.
       plate: {
         glb: R2 + '/assiette.glb',   // vrai bol modélisé (Blender → glTF)
-        floorRatio: -0.0509,         // fond intérieur du bol ÷ diamètre (mesuré)
+        floorRatio: -0.0004,         // fond intérieur du bol ÷ diamètre (mesuré)
         foodRatio: 0.36,  // largeur dressage ÷ diamètre assiette → &fr=
         depth: 0.05,      // (repli si le GLB ne charge pas)      → &pdepth=
         sink: 0.14,       // enfoncement du dressage dans le creux → &sink=
@@ -648,7 +648,8 @@
       const c1 = PL.color || [0.97, 0.96, 0.95];
       mat.diffuse = new pc.Color(c1[0], c1[1], c1[2]);
       mat.gloss = 0.72; mat.useMetalness = true; mat.metalness = 0;
-      mat.cull = pc.CULLFACE_NONE; mat.twoSidedLighting = true;
+      mat.cull = pc.CULLFACE_BACK;   // le bol est un solide à parois : pas de
+                                     // double face → aucun z-fighting
       mat.update();
       mis.forEach((m) => { m.material = mat; });
 
