@@ -309,11 +309,6 @@ button{font-family:inherit;cursor:pointer;background:none;border:none;color:inhe
                   qui ouvre salina-viewer.html?dish=cléDuPlat)
    ============================================================ */
 
-// Version du viewer : à incrémenter à CHAQUE déploiement viewer/CSS/PLY.
-// Injectée dans les liens 3D → force le navigateur et le CDN à recharger
-// la page viewer ET le .ply (sinon cache tenace par URL complète).
-const VIEWER_V = "1010";
-
 const CHAPTERS = [
   {
     id: "aperitivo", nav: "Apéritivo",
@@ -374,7 +369,7 @@ const CHAPTERS = [
         title: "Crus à la coupe",
         items: [
           { name:"Thon", price:"26", alg:[4] },
-          { name:"Saumon", price:"26", alg:[4] },
+          { name:"Saumon", price:"26", alg:[4], splat:"saumon" },
           { name:"Daurade", price:"24", alg:[4] },
           { name:"Sériole", price:"26", alg:[4] },
         ]
@@ -383,7 +378,7 @@ const CHAPTERS = [
         title: "Tartares",
         items: [
           { name:"Thon", price:"28", alg:[4], splat:"thon" },
-          { name:"Saumon", price:"26", alg:[4], splat:"tartare" },
+          { name:"Saumon", price:"26", alg:[4] },
           { name:"Daurade", price:"26", alg:[4] },
           { name:"Sériole", price:"28", alg:[4] },
           { name:"Crevette rouge<sup>*</sup>", price:"45", alg:[14] },
@@ -496,7 +491,7 @@ const CHAPTERS = [
       {
         title: "Pâtes & Risottos",
         items: [
-          { name:"Spaghetto alla chitarra Mancini", desc:"vongole, pois chiches, poutargue de thon de Favignana", price:"38", alg:[1,4,9,12,14], splat:"pates" },
+          { name:"Spaghetto alla chitarra Mancini", desc:"vongole, pois chiches, poutargue de thon de Favignana", price:"38", alg:[1,4,9,12,14], splat:"pasta" },
           { name:"Linguina Mancini", desc:"oursins, tomates datterino BIO, poutargue de thon de Favignana", price:"48", alg:[1,4,9,12,14] },
           { name:"Calamarata Mancini", desc:"ragoût d'espadon* de Méditerranée, tomate datterino BIO, aubergines fumées", price:"36", alg:[1,4,9,12] },
           { name:"Fregola BIO", desc:"galinette, graines de fenouil, macis", price:"35", unit:"pour 2", alg:[4,9,12] },
@@ -565,7 +560,7 @@ const CHAPTERS = [
           { name:"Millefeuille croquant", desc:"mousse de ricotta, copeaux de chocolat noir Modicano, orange amère", price:"18", alg:[1,7] },
           { name:"Meringue flambée", desc:"crème chantilly, coulis de framboise, éponge de pistache de Bronte, fruits des bois", price:"20", alg:[3,7,8] },
           { name:"Tartelette au chocolat", desc:"crémeux de vanille Bourbon, pistache", price:"18", alg:[1,3,7,8] },
-          { name:"Cannolo Sicilien", price:"15", alg:[1,7], splat:"canolo" },
+          { name:"Cannolo Sicilien", price:"15", alg:[1,7], splat:"dessert" },
           { name:"Semifreddo du jour", price:"15", alg:[1,3,7,8] },
         ]
       },
@@ -626,10 +621,7 @@ function buildDish(item){
 
   if(item.splat){
     const badge = el("a","badge3d");
-    // VIEWER_V : casse le cache navigateur/CDN du viewer ET des .ply R2
-    // (l'URL complète, query comprise, sert de clé de cache → sans ce
-    // paramètre, un plat déjà visité peut resservir l'ancien viewer).
-    badge.href = "salina-viewer.html?dish=" + item.splat + "&v=" + VIEWER_V;
+    badge.href = "salina-viewer.html?dish=" + item.splat;
     badge.setAttribute("aria-label", "Voir " + name.textContent.trim() + " en 3D");
     badge.innerHTML = '<span class="dot"></span>3D';
     head.appendChild(badge);
