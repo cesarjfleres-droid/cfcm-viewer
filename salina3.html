@@ -189,9 +189,9 @@
       name: 'Thon',
       price: '28 €',
       ply: R2 + '/thon.ply',            // PLY d'origine (le nettoyage coûtait des détails)
-      // Retourné de 180° : le dressage se pose à l'endroit, et les halos de
-      // reconstruction passent SOUS l'assiette, où elle les masque.
-      euler: [180, 180, 0],             // ajustable à chaud : &ex= &ey= &ez=
+      // Orientation : gérée par la mise à plat automatique (plan du dressage
+      // aligné sur l'assiette). Retouche éventuelle : &ex= &ey= &ez= &flip=1
+      euler: [0, 0, 0],
       // Assiette GÉNÉRÉE PAR LE VIEWER (aucun fichier à héberger).
       // Elle se dimensionne toute seule sur la largeur de la nourriture.
       plate: {
@@ -443,7 +443,7 @@
 
   // Rotation : auto (redresse le plan de l'assiette) sauf en mode assiette 3D,
   // où le .ply nourriture est déjà orienté dans SuperSplat.
-  const autoRot = num('autorot', dish.plate ? 0 : 1) === 1;
+  const autoRot = num('autorot', 1) === 1;   // &autorot=0 pour l'orientation brute du PLY
   let q = new pc.Quat();
   if (M && autoRot) {
     const n = M.normal, d = n[1];
