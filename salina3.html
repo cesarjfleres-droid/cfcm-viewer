@@ -282,16 +282,16 @@
       ply: R2 + '/thon2.ply',           // PLY nettoyé (nom neuf : aucun cache possible)
       // Orientation : gérée par la mise à plat automatique (plan du dressage
       // aligné sur l'assiette). Retouche éventuelle : &ex= &ey= &ez= &flip=1
-      euler: [0, 30, 0],   // rotation horizontale du dressage
+      euler: [-5, 78, 16],   // pose validée au curseur
       // Assiette GÉNÉRÉE PAR LE VIEWER (aucun fichier à héberger).
       // Elle se dimensionne toute seule sur la largeur de la nourriture.
       plate: {
         glb: R2 + '/assiette2.glb',  // vrai bol modélisé (Blender → glTF), mesh non décimé
         floorRatio: -0.0004,         // fond intérieur du bol ÷ diamètre (mesuré)
-        foodRatio: 0.36,  // largeur dressage ÷ diamètre assiette → &fr=
-        depth: 0.05,      // (repli si le GLB ne charge pas)      → &pdepth=
-        sink: 0.30,       // enfoncement : enterre la bavure de reconstruction
-                          // sous la surface opaque de l'assiette → &sink=
+        foodRatio: 0.40,  // largeur dressage ÷ diamètre assiette → &fr=
+        depth: 0.045,     // (repli si le GLB ne charge pas)      → &pdepth=
+        sink: 0.02,       // enfoncement du dressage → &sink=
+        dx: -85, dz: -55, zoom: 0.96,   // placement validé au curseur
         color: [0.97, 0.96, 0.95],
       },
     },
@@ -571,9 +571,9 @@
     fr:      num('fr', PL.foodRatio || 0.36),
     pdepth:  num('pdepth', PL.depth !== undefined ? PL.depth : 0.05),
     sink:    num('sink', PL.sink !== undefined ? PL.sink : 0.05),
-    dx:      num('dx', 0),        // décalage horizontal du dressage
-    dz:      num('dz', 0),
-    zoom:    num('zoom', 1),      // facteur de taille du dressage
+    dx:      num('dx', PL.dx || 0),      // décalage horizontal du dressage
+    dz:      num('dz', PL.dz || 0),
+    zoom:    num('zoom', PL.zoom || 1), // facteur de taille du dressage
   };
 
   function applyPose() {
