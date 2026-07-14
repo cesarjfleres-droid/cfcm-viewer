@@ -299,7 +299,21 @@
     // ---- Mode SPLAT SEUL (le .ply contient déjà l'assiette) ----
     tacos:   { name: 'Tacos Saumon', price: '20 €', ply: R2 + '/tacos.ply' },
     saumon:  { name: 'Saumon',       price: '26 €', ply: R2 + '/tartare-2.ply' },
-    pasta:   { name: 'Spaghetto alla chitarra', price: '38 €', ply: R2 + '/pates.ply' },
+    pasta: {
+      name: 'Spaghetto alla chitarra',
+      price: '38 €',
+      ply: R2 + '/Salina_pates.ply',    // nourriture seule (nettoyée SuperSplat)
+      euler: [0, 0, 0],                 // à calibrer au curseur (&edit=1)
+      plate: {
+        glb: R2 + '/kenzo.glb',
+        floorRatio: -0.0234,            // fond intérieur du bol ÷ diamètre (mesuré)
+        foodRatio: 0.40,  // largeur dressage ÷ diamètre assiette → &fr=
+        depth: 0.045,     // repli si le GLB ne charge pas         → &pdepth=
+        sink: 0.02,       // enfoncement du dressage               → &sink=
+        dx: 0, dz: 0, zoom: 1,
+        color: [0.97, 0.96, 0.95],
+      },
+    },
     dessert: { name: 'Cannolo Sicilien',        price: '15 €', ply: R2 + '/canolo.ply' },
   };
 
