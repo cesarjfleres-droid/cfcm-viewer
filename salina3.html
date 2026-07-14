@@ -188,7 +188,10 @@
     thon: {
       name: 'Thon',
       price: '28 €',
-      ply: R2 + '/thon-clean.ply',      // nourriture seule, floaters/halo supprimés
+      ply: R2 + '/thon.ply',            // PLY d'origine (le nettoyage coûtait des détails)
+      // Retourné de 180° : le dressage se pose à l'endroit, et les halos de
+      // reconstruction passent SOUS l'assiette, où elle les masque.
+      euler: [180, 0, 0],               // ajustable à chaud : &ex= &ey= &ez=
       // Assiette GÉNÉRÉE PAR LE VIEWER (aucun fichier à héberger).
       // Elle se dimensionne toute seule sur la largeur de la nourriture.
       plate: {
@@ -451,7 +454,8 @@
     }
   }
   // Retouche manuelle éventuelle : &ex= &ey= &ez=
-  const qm = new pc.Quat().setFromEulerAngles(num('ex', 0), num('ey', 0), num('ez', 0));
+  const E = dish.euler || [0, 0, 0];
+  const qm = new pc.Quat().setFromEulerAngles(num('ex', E[0]), num('ey', E[1]), num('ez', E[2]));
   q = new pc.Quat().mul2(qm, q);
   if (num('flip', 0)) q = new pc.Quat().mul2(new pc.Quat().setFromEulerAngles(180, 0, 0), q);
   splat.setLocalRotation(q);
