@@ -192,10 +192,10 @@
       // Assiette GÉNÉRÉE PAR LE VIEWER (aucun fichier à héberger).
       // Elle se dimensionne toute seule sur la largeur de la nourriture.
       plate: {
-        foodRatio: 0.34,  // largeur nourriture ÷ diamètre assiette → &fr=
-        depth: 0.055,     // creux très faible (assiette plate)     → &pdepth=
-        sink: 0.22,       // enfoncement de la nourriture           → &sink=
-        color: [0.96, 0.95, 0.94],   // porcelaine blanche
+        foodRatio: 0.36,  // largeur dressage ÷ diamètre assiette → &fr=
+        depth: 0.05,      // creux très faible (assiette plate)   → &pdepth=
+        sink: 0.02,       // léger enfoncement                    → &sink=
+        color: [0.97, 0.96, 0.95],   // porcelaine blanche
       },
     },
 
@@ -417,7 +417,9 @@
       }
 
       const extent = Math.max(size[0], size[1], size[2]);
-      return { centre, size, extent, normal: nrm };
+      // Points du cœur (opaques) : serviront à calculer le VRAI contact avec
+      // l'assiette, sans être pollués par les halos et le bruit.
+      return { centre, size, extent, normal: nrm, pts: { xs, ys, zs } };
     } catch (e) {
       dbg('mesure impossible : ' + e.message, 'bad');
       return null;
@@ -474,15 +476,35 @@
   splat.setLocalPosition(-cw.x * scale, -cw.y * scale, -cw.z * scale);
   dbg(`splat : échelle ${scale.toFixed(0)} · rotation auto ${autoRot ? 'oui' : 'non'}`);
 
-  // Hauteur réelle du bas de la nourriture (après pose) : sert à poser l'assiette
+  /* Contact réel avec l'assiette.
+     La bounding box du splat inclut les halos et la brume de reconstruction :
+     s'en servir ferait FLOTTER le plat. On repasse donc sur les points du cœur
+     opaque (mesurés plus haut), on leur applique la même transformation que
+     l'entité (rotation puis échelle), et on lit :
+       · le point le plus bas (p0.5%) → hauteur de contact
+       · le rayon horizontal (p97%)   → largeur réelle du dressage
+     Le tout est insensible aux floaters. */
   let foodBottom = -300, foodWidth = target, foodHeight = target * 0.4;
-  try {
-    const aabb = splat.gsplat.instance.meshInstance.aabb;
-    foodBottom = aabb.center.y - aabb.halfExtents.y;
-    foodWidth = Math.max(aabb.halfExtents.x, aabb.halfExtents.z) * 2;
-    foodHeight = aabb.halfExtents.y * 2;
-    dbg(`nourriture : largeur ${foodWidth.toFixed(0)} · hauteur ${foodHeight.toFixed(0)} · bas y=${foodBottom.toFixed(0)}`);
-  } catch (e) { dbg('aabb splat indisponible, valeurs par défaut', 'bad'); }
+  if (M && M.pts) {
+    const { xs, ys, zs } = M.pts;
+    const tmp = new pc.Vec3(), out = new pc.Vec3();
+    const yy = [], rr = [];
+    for (let i = 0; i < xs.length; i++) {
+      tmp.set(xs[i] - c.x, ys[i] - c.y, zs[i] - c.z);
+      q.transformVector(tmp, out);
+      yy.push(out.y * scale);
+      rr.push(Math.hypot(out.x, out.z) * scale);
+    }
+    yy.sort((a, b) => a - b);
+    rr.sort((a, b) => a - b);
+    const at = (arr, p) => arr[Math.max(0, Math.min(arr.length - 1, Math.round(p * (arr.length - 1))))];
+    foodBottom = at(yy, 0.005);
+    foodHeight = at(yy, 0.995) - foodBottom;
+    foodWidth = at(rr, 0.97) * 2;
+    dbg(`nourriture (cœur opaque) : largeur ${foodWidth.toFixed(0)} · hauteur ${foodHeight.toFixed(0)} · contact y=${foodBottom.toFixed(0)}`);
+  } else {
+    dbg('mesure du cœur indisponible → valeurs par défaut', 'bad');
+  }
 
   /* ==========================================================
      7. ASSIETTE GÉNÉRÉE (surface de révolution)
@@ -544,9 +566,13 @@
     plate.addComponent('render', { meshInstances: [new pc.MeshInstance(mesh, mat)] });
     pivot.addChild(plate);
 
-    // Le fond du creux se cale sous la nourriture, enfoncée de `sink`
-    const sink = num('sink', cfg.sink !== undefined ? cfg.sink : 0.30);
-    const y = num('py', foodBottom + foodHeight * sink);
+    /* Pose : le FOND du creux (y local = 0) arrive juste sous le point de
+       contact du dressage, avec un jeu minime pour éviter toute intersection.
+       La nourriture repose donc réellement sur l'assiette — elle ne flotte
+       plus et ne s'y enfonce pas. `sink` permet un léger enfoncement voulu. */
+    const GAP = DIA * 0.004;                       // ~1–3 mm à l'échelle réelle
+    const sink = num('sink', cfg.sink !== undefined ? cfg.sink : 0.02);
+    const y = num('py', foodBottom - GAP + foodHeight * sink);
     plate.setLocalPosition(0, y, 0);
 
     dbg(`assiette générée : ø ${DIA.toFixed(0)} · creux ${DEPTH.toFixed(0)} · y=${y.toFixed(0)}`, 'ok');
