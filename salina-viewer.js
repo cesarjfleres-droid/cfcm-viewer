@@ -17,24 +17,9 @@
  *  · Zoom min resserré (0.8) : plus de gros plan dans la frange.
  *  · Inertie conservée, s'arrête en douceur aux limites.
  *
- * v29 — auto-pose durcie (conservée) :
- *  · Correctif flip : les hauteurs suivent le retournement de la normale.
- *  · CŒUR DU PLAT : profil de densité le long des axes du plan → la table
- *    autour (scan tacos) est exclue ; recentrage + échelle calés sur le
- *    cœur seulement quand du contexte est détecté.
- *
- * v30 — STUDIO BLANC, PLAT VEDETTE :
- *  · SOCLE SUPPRIMÉ : le volume cache-trous créait des artefacts
- *    (perçages, plaques blanches). Le fond studio passe au BLANC (CSS) :
- *    les trous du scan se fondent dans l'assiette, zéro géométrie ajoutée.
- *  · PLAT PLUS GRAND : cadrage auto 2250 → 2700 (+20 %).
- *  · PLAT PLUS HAUT : point de visée abaissé (looky 1400 → 200) → le plat
- *    remonte vers le centre de l'écran, dégagé des boutons du bas.
- *  · DÉZOOM BRIDÉ : ZOOM_MAX 1.7 → 1.2, le plat reste toujours dominant.
- *
  * Calibration sans redéployer :
  *   ?dish=plat1&yaw0=35&yawr=45&elev=38&elevmin=30&elevmax=52
- *   &looky=200  + ex/ey/ez, fx/fy/fz, scale, camz, lift, zoommin
+ *   &looky=1400  + ex/ey/ez, fx/fy/fz, scale, camz, lift
  * ============================================================ */
 (async function main() {
   const $ = (id) => document.getElementById(id);
@@ -110,7 +95,17 @@
     thon: {
       name: 'Tartare de Thon',
       price: '28 \u20ac',
-      url: `${R2}/thon.ply`,
+      url: `${R2}/thon.ply`,          // splat NOURRITURE SEULE (nettoyé SuperSplat)
+      // Assiette = mesh 3D propre (GLB) rendue sous la nourriture : plus de
+      // trous possibles, l'assiette est parfaite sous tous les angles.
+      plate: {
+        url: `${R2}/assiette.glb`,
+        dia: 2400,        // diamètre monde de l'assiette (&pdia=)
+        foodRatio: 0.48,  // étendue nourriture / diamètre assiette (&fr=)
+        sink: 0.16,       // enfoncement de la nourriture dans le creux (&sink=)
+        // mesures du mesh (assiette.glb, bas à y=0)
+        meshDia: 11.9506, meshH: 2.0, meshFloorY: 0.40,
+      },
       // PLY brut du pipeline (sans transform SuperSplat) : dessus vers +Z
       // → base identité, la mise à plat table (Rx -90) fait le reste.
       // Validé sur canolo ; si un plat diffère : calibrer via &ex= &ey= &ez=
@@ -125,8 +120,8 @@
       elev0: 46, elevMin: 42, elevMax: 54, zoomMin: 0.55,
     },
     tartare: {
-      name: 'Tartare de Saumon',
-      price: '26 \u20ac',
+      name: 'Tartare',
+      price: '28 \u20ac',
       url: `${R2}/tartare-2.ply`,
       euler: [0, 0, 0],
       correction: [0, 0, 0],
@@ -134,8 +129,6 @@
       scale: 3200,            // fallback si l'auto-pose échoue
       camZ: 10000,
       lift: -450,
-      flip: 1,                // le vote dessus/dessous se trompe sur ce scan
-                              // (contenant transparent) → retournement forcé
       yaw0: 0,
       yawRange: 360,
       elev0: 46, elevMin: 42, elevMax: 54, zoomMin: 0.55,
@@ -196,13 +189,13 @@
   const CAM_ELEV_DEG  = num('elev', dish.elev0 ?? 40);       // angle vedette vertical
   const ELEV_MIN_DEG  = num('elevmin', dish.elevMin ?? 37);  // plancher : jamais rasant, jamais le dessous
   const ELEV_MAX_DEG  = num('elevmax', dish.elevMax ?? 48);  // plafond : jamais de zénith écrasé
-  const LOOK_Y        = num('looky', 200);        // v30 : visée basse → plat quasi centré, dégagé des boutons
+  const LOOK_Y        = num('looky', 1400);       // point de visée au-dessus du plat (~62 %)
   const YAW_START     = num('yaw0', dish.yaw0);   // angle vedette horizontal au chargement
   const YAW_RANGE     = num('yawr', dish.yawRange); // rotation autorisée : ± autour de l'angle vedette
 
   const FOV_Y = 50;
   const ZOOM_MIN = num('zoommin', dish.zoomMin ?? 0.55);  // v28 : gros plan profond rétabli
-  const ZOOM_MAX = num('zoommax', 1.2);   // v30 : dézoom bridé, le plat reste dominant
+  const ZOOM_MAX = 1.7;
 
   // Fiche plat dans l'UI
   $('dish-name').textContent = dish.name;
@@ -242,6 +235,7 @@
   createOptions.componentSystems = [
     pc.RenderComponentSystem,
     pc.CameraComponentSystem,
+    pc.LightComponentSystem,   // éclaire les meshes (assiette GLB) — sans effet sur les splats
     pc.ScriptComponentSystem,
     pc.GSplatComponentSystem
   ];
@@ -260,6 +254,18 @@
   gfxDevice.maxPixelRatio = dpr;
 
   app.scene.skyboxIntensity = 0;
+  // Éclairage doux pour les meshes (l'assiette) : ambiance + soleil incliné
+  // pour donner du modelé au creux. Les gaussian splats n'y sont pas sensibles.
+  app.scene.ambientLight = new pc.Color(0.58, 0.58, 0.56);
+  const sun = new pc.Entity('sun');
+  sun.addComponent('light', {
+    type: 'directional',
+    color: new pc.Color(1.0, 0.98, 0.94),
+    intensity: 1.15,
+    castShadows: false,
+  });
+  sun.setEulerAngles(55, 35, 0);
+  app.root.addChild(sun);
   setProgress(10);
 
   const camPosFor = (dist, elevDeg) => {
@@ -285,6 +291,14 @@
   // ---------- 2. LOAD SPLAT (R2, avec progression) ----------
   const splatAsset = new pc.Asset(dishKey, 'gsplat', { url: `${dish.url}?v=${v}` });
   app.assets.add(splatAsset);
+
+  // Assiette 3D (mesh GLB) chargée en parallèle si le plat en déclare une
+  let plateAsset = null;
+  if (dish.plate && dish.plate.url) {
+    plateAsset = new pc.Asset(dishKey + '-plate', 'container', { url: `${dish.plate.url}?v=${v}` });
+    app.assets.add(plateAsset);
+    app.assets.load(plateAsset);
+  }
 
   splatAsset.on('progress', (received, total) => {
     if (total > 0) setProgress(18 + (received / total) * 72);
@@ -324,23 +338,12 @@
       const po = gd.getProp('opacity');   // logit
       if (px && py && pz) {
         // Échantillon de points opaques (≤ 30 000)
-        // v30.1 : les NaN/Inf (PLY splatfacto parfois corrompus) sont écartés,
-        // sinon une seule valeur empoisonne médianes et covariance → pose NaN
-        // → plat invisible. Le nettoyage définitif se fait côté pipeline
-        // (ply_cleaner.py) mais le viewer ne doit jamais casser pour ça.
         const stride = Math.max(1, Math.floor(N / 30000));
         const xs = [], ys = [], zs = [];
-        let dropped = 0;
         for (let i = 0; i < N; i += stride) {
-          const X = px[i], Y = py[i], Z = pz[i];
-          if (!Number.isFinite(X) || !Number.isFinite(Y) || !Number.isFinite(Z)) { dropped++; continue; }
-          if (po) {
-            const o = 1 / (1 + Math.exp(-po[i]));
-            if (!Number.isFinite(o) || o < 0.6) continue;
-          }
-          xs.push(X); ys.push(Y); zs.push(Z);
+          if (po) { const o = 1 / (1 + Math.exp(-po[i])); if (o < 0.6) continue; }
+          xs.push(px[i]); ys.push(py[i]); zs.push(pz[i]);
         }
-        if (dropped > 0) console.warn('[auto-pose] ' + dropped + ' points NaN/Inf ignorés — nettoyer le .ply avec ply_cleaner.py avant upload R2');
         const n = xs.length;
         if (n > 300) {
           const med = (arr) => { const s = arr.slice().sort((a, b) => a - b); return s[s.length >> 1]; };
@@ -431,16 +434,8 @@
           let score = 0;
           if (aColor + bColor > 200) score += 2 * (aColor - bColor) / (aColor + bColor);
           if (aMass + bMass > 200) score += (aMass - bMass) / (aMass + bMass);
-          // Retournement (auto et/ou &flip=1) : on retourne AUSSI les hauteurs
-          // mesurées, sinon "point le plus bas" et "bord" sont lus du mauvais
-          // côté → socle mal placé (cause historique des perçages).
-          let flipped = false;
-          if (score < 0) flipped = !flipped;
-          if (num('flip', dish.flip || 0)) flipped = !flipped;   // URL > config plat > vote auto
-          if (flipped) {
-            nx = -nx; ny = -ny; nz = -nz;
-            for (let i = 0; i < n; i++) dsig[i] = -dsig[i];
-          }
+          if (score < 0) { nx = -nx; ny = -ny; nz = -nz; }
+          if (num('flip', 0)) { nx = -nx; ny = -ny; nz = -nz; }
           // Quaternion normale → +Y (from-to)
           let qAuto;
           const dot = ny;
@@ -453,160 +448,23 @@
           // Point le plus bas du nuage le long de la normale (le socle ira dessous)
           const sigS = dsig.slice().sort((a, b) => a - b);
           const dLow = pct(sigS, 0.005);
-
-          // ---- CŒUR DU PLAT (v29) ----
-          // Certains scans (tacos) embarquent la table autour du plat : le nuage
-          // est bien plus grand que le plat seul. On isole le CŒUR par profil de
-          // densité 1D le long de chaque axe du plan : le pipeline concentre les
-          // gaussiennes sur le sujet, la densité s'effondre au bord du plat.
-          // Toutes les mesures du socle (bas, bord, trous) se font sur ce cœur.
-          const coreBox = !!(dish.disc && dish.disc.shape === 'box');
-          const measure = (e1c, e2c) => {
-            const pa = new Array(n), pb = new Array(n);
-            for (let i = 0; i < n; i++) {
-              const dx = xs[i] - cx, dy = ys[i] - cy, dz = zs[i] - cz;
-              pa[i] = dx * e1c[0] + dy * e1c[1] + dz * e1c[2];
-              pb[i] = dx * e2c[0] + dy * e2c[1] + dz * e2c[2];
-            }
-            const knee = (proj) => {
-              const abs = new Array(n);
-              for (let i = 0; i < n; i++) abs[i] = Math.abs(proj[i]);
-              const absS = abs.slice().sort((u, v) => u - v);
-              const pMax = pct(absS, 0.99);
-              const fallback = pct(absS, 0.97);
-              if (!(pMax > 1e-9)) return fallback;
-              const B = 60, w = pMax / B, hist = new Float32Array(B);
-              for (let i = 0; i < n; i++) hist[Math.min(B - 1, (abs[i] / w) | 0)]++;
-              const sm = new Float32Array(B);
-              for (let i = 0; i < B; i++)
-                sm[i] = (hist[Math.max(0, i - 1)] + hist[i] + hist[Math.min(B - 1, i + 1)]) / 3;
-              const refArr = Array.from(sm.slice(1, Math.max(4, (B * 0.35) | 0))).sort((u, v) => u - v);
-              const ref = refArr[refArr.length >> 1] || 1;
-              const thr = 0.2 * ref;   // la densité tombe sous 20 % du centre = bord du plat
-              for (let i = (B * 0.3) | 0; i < B - 2; i++) {
-                if (sm[i] < thr && sm[i + 1] < thr && sm[i + 2] < thr) return (i + 0.5) * w;
-              }
-              return fallback;   // pas de contexte : bord = P97 (scans cadrés)
-            };
-            let h1 = Math.min(knee(pa), radius * 1.05);
-            let h2 = Math.min(knee(pb), radius * 1.05);
-            h1 = Math.max(h1, radius * 0.15);
-            h2 = Math.max(h2, radius * 0.15);
-            const cA = [], cB = [], cH = [];
-            for (let i = 0; i < n; i++) {
-              if (Math.abs(pa[i]) <= h1 * 1.05 && Math.abs(pb[i]) <= h2 * 1.05) {
-                cA.push(pa[i]); cB.push(pb[i]); cH.push(dsig[i]);
-              }
-            }
-            return { h1, h2, cA, cB, cH };
-          };
-
-          let e1c = e1, e2c = e2;
-          let M = measure(e1c, e2c);
-          // Affinage : axes principaux du CŒUR seul — le contexte table fausse
-          // l'orientation mesurée sur le nuage entier (critique pour le plateau tacos)
-          if (M.cA.length > 300) {
-            const mA = med(M.cA), mB = med(M.cB);
-            let sAA = 0, sAB = 0, sBB = 0;
-            for (let i = 0; i < M.cA.length; i++) {
-              const da = M.cA[i] - mA, db = M.cB[i] - mB;
-              sAA += da * da; sAB += da * db; sBB += db * db;
-            }
-            const phi = 0.5 * Math.atan2(2 * sAB, sAA - sBB);
-            if (Math.abs(phi) > 0.03) {
-              const cph = Math.cos(phi), sph = Math.sin(phi);
-              const r1 = [
-                cph * e1c[0] + sph * e2c[0],
-                cph * e1c[1] + sph * e2c[1],
-                cph * e1c[2] + sph * e2c[2]];
-              const r2 = [
-                -sph * e1c[0] + cph * e2c[0],
-                -sph * e1c[1] + cph * e2c[1],
-                -sph * e1c[2] + cph * e2c[2]];
-              e1c = r1; e2c = r2;
-              M = measure(e1c, e2c);
-            }
+          // Étendues le long des 2 axes du plan (P3–P97) pour le socle rectangulaire
+          const p1 = new Array(n), p2 = new Array(n);
+          for (let i = 0; i < n; i++) {
+            const dx = xs[i] - cx, dy = ys[i] - cy, dz = zs[i] - cz;
+            p1[i] = dx * e1[0] + dy * e1[1] + dz * e1[2];
+            p2[i] = dx * e2[0] + dy * e2[1] + dz * e2[2];
           }
-          // Grand axe en premier (h1 >= h2)
-          if (M.h2 > M.h1) {
-            const th = M.h1; M.h1 = M.h2; M.h2 = th;
-            const tc = M.cA; M.cA = M.cB; M.cB = tc;
-            const te = e1c; e1c = e2c; e2c = te;
-          }
-
-          const coreOK = M.cH.length > 300;
-          // Contexte table détecté = le cœur est nettement plus petit que le nuage.
-          // Dans ce cas seulement : recentrage + échelle sur le cœur (le rendu
-          // des scans cadrés déjà validés reste strictement identique).
-          const CTX = coreOK && Math.max(M.h1, M.h2) < radius * 0.85;
-          let shiftA = 0, shiftB = 0, coreLow = dLow, coreRim = 0;
-          let holeR = 0, holeA = 0, holeB = 0;
-          if (coreOK) {
-            if (CTX) { shiftA = med(M.cA); shiftB = med(M.cB); }
-            const hS = M.cH.slice().sort((u, v) => u - v);
-            coreLow = pct(hS, 0.01);   // vrai point bas du plat (P1, floaters exclus)
-            // Bas du bord visible (bande extérieure du cœur) → référence silhouette
-            const rimArr = [];
-            for (let i = 0; i < M.cA.length; i++) {
-              const u = Math.abs(M.cA[i] - shiftA) / M.h1;
-              const v = Math.abs(M.cB[i] - shiftB) / M.h2;
-              const m = Math.max(u, v);
-              if (m >= 0.72 && m <= 1.05) rimArr.push(M.cH[i]);
-            }
-            const rimS = rimArr.sort((u, v) => u - v);
-            coreRim = rimS.length > 50 ? pct(rimS, 0.25) : pct(hS, 0.6);
-            // Carte d'occupation 18×18 : où sont les VRAIS trous du plat ?
-            const G = 18, grid = new Int32Array(G * G);
-            for (let i = 0; i < M.cA.length; i++) {
-              const u = (M.cA[i] - shiftA) / M.h1;
-              const v = (M.cB[i] - shiftB) / M.h2;
-              const gx = (((u + 1) / 2) * G) | 0, gy = (((v + 1) / 2) * G) | 0;
-              if (gx >= 0 && gx < G && gy >= 0 && gy < G) grid[gy * G + gx]++;
-            }
-            const solidThr = Math.max(3, Math.round((M.cA.length / (G * G)) * 0.30));
-            for (let gy = 0; gy < G; gy++) {
-              for (let gx = 0; gx < G; gx++) {
-                if (grid[gy * G + gx] >= solidThr) continue;
-                const u = ((gx + 0.5) / G) * 2 - 1;
-                const v = ((gy + 0.5) / G) * 2 - 1;
-                // seuls les trous INTÉRIEURS comptent (le pourtour = vide normal)
-                const interior = coreBox
-                  ? (Math.abs(u) <= 0.86 && Math.abs(v) <= 0.86)
-                  : (u * u + v * v <= 0.74);
-                if (!interior) continue;
-                const aw = Math.abs(u) * M.h1, bw = Math.abs(v) * M.h2;
-                if (aw > holeA) holeA = aw;
-                if (bw > holeB) holeB = bw;
-                const rw = Math.hypot(aw, bw);
-                if (rw > holeR) holeR = rw;
-              }
-            }
-            if (holeR === 0) {   // aucun trou détecté : socle minimal de sécurité
-              holeR = 0.3 * Math.min(M.h1, M.h2);
-              holeA = 0.3 * M.h1;
-              holeB = 0.3 * M.h2;
-            }
-          }
-          const cRef = CTX ? [
-            cx + shiftA * e1c[0] + shiftB * e2c[0],
-            cy + shiftA * e1c[1] + shiftB * e2c[1],
-            cz + shiftA * e1c[2] + shiftB * e2c[2],
-          ] : [cx, cy, cz];
+          const p1S = p1.sort((a, b) => a - b), p2S = p2.sort((a, b) => a - b);
           AUTO = {
             quat: qAuto,
-            centre: cRef,
+            centre: [cx, cy, cz],
             radius: radius,
-            extent: CTX ? 2 * Math.max(M.h1, M.h2) : radius * 2,
+            extent: radius * 2,
             dLow: dLow,
-            coreOK: coreOK,
-            coreH1: M.h1,
-            coreH2: M.h2,
-            coreLow: coreLow,
-            coreRim: coreRim,
-            holeR: holeR,
-            holeA: holeA,
-            holeB: holeB,
-            axis1: e1c,
+            ext1: pct(p1S, 0.97) - pct(p1S, 0.03),
+            ext2: pct(p2S, 0.97) - pct(p2S, 0.03),
+            axis1: e1,
           };
         }
       }
@@ -620,8 +478,12 @@
   //    horizontal et stable, prêt à être vu en plongée. rotation X/Z finales = 0.
   // Le centroïde est transformé par la MÊME rotation finale → plat centré.
   const qCorr  = new pc.Quat().setFromEulerAngles(CORR_X, CORR_Y, CORR_Z);
+  // Avec une assiette mesh : le PLY nourriture sort de SuperSplat déjà orienté,
+  // la rotation auto (pensée pour détecter le plan d'une assiette) est coupée.
+  // &autorot=1 pour la forcer, &ex/&ey/&ez pour l'orientation manuelle.
+  const AUTO_ROT = num('autorot', dish.plate ? 0 : 1);
   let qFinal;
-  if (AUTO) {
+  if (AUTO && AUTO_ROT) {
     // qAuto pose déjà l'assiette à plat (normale → +Y) ; fx/fy/fz = retouche
     qFinal = new pc.Quat().mul2(qCorr, AUTO.quat);
   } else {
@@ -639,10 +501,12 @@
   splatEntity.addComponent('gsplat', { asset: splatAsset });
   pivot.addChild(splatEntity);
 
+  const FOOD_TARGET = dish.plate
+    ? num('pdia', dish.plate.dia || 2400) * num('fr', dish.plate.foodRatio || 0.48)
+    : 2250;
   const SCALE_EFF = Number.isFinite(num('scale', NaN)) ? num('scale', NaN)
-                  : (AUTO ? 2700 / AUTO.extent : SPLAT_SCALE);
+                  : (AUTO ? FOOD_TARGET / AUTO.extent : SPLAT_SCALE);
   splatEntity.setLocalScale(SCALE_EFF, SCALE_EFF, SCALE_EFF);
-  console.info('[cadrage v30]', dishKey, '| scale =', Math.round(SCALE_EFF), AUTO ? ('| extent = ' + AUTO.extent.toFixed(2) + ' | coreOK = ' + AUTO.coreOK) : '| auto off');
   splatEntity.setLocalRotation(qFinal);
 
   // Centroïde local → monde : tourné (rotation finale) puis négué
@@ -660,11 +524,72 @@
   qFinal.transformVector(_scaled, _rotated);
   splatEntity.setLocalPosition(-_rotated.x, -_rotated.y + SPLAT_LIFT_Y, -_rotated.z);
 
-  // ---------- 3bis. SOCLE : SUPPRIMÉ (v30) ----------
-  // Le volume cache-trous créait des artefacts visibles (perçages, plaques).
-  // Nouvelle stratégie : fond STUDIO BLANC (CSS) → les zones sans gaussiennes
-  // laissent voir le blanc, qui se fond naturellement dans l'assiette.
-  // Aucune géométrie ajoutée sous le plat.
+  // ---------- 3bis-A. ASSIETTE 3D (mesh GLB sous la nourriture) ----------
+  if (dish.plate && plateAsset) {
+    try {
+      if (!plateAsset.loaded) {
+        await new Promise((resolve, reject) => {
+          plateAsset.once('load', resolve);
+          plateAsset.once('error', reject);
+        });
+      }
+      const P = dish.plate;
+      const plateEnt = plateAsset.resource.instantiateRenderEntity();
+      pivot.addChild(plateEnt);
+      const PDIA = num('pdia', P.dia || 2400);
+      const sP = PDIA / (P.meshDia || 12);
+      plateEnt.setLocalScale(sP, sP, sP);
+      // Fond du creux au niveau du bas de la nourriture, nourriture enfoncée
+      // de sink × son étendue. Bas nourriture ≈ centre − 0.5 × étendue.
+      const foodExt = AUTO ? AUTO.extent * SCALE_EFF : FOOD_TARGET;
+      const sink = num('sink', P.sink !== undefined ? P.sink : 0.16);
+      const foodBottomY = SPLAT_LIFT_Y - foodExt * 0.5 * 0.6;  // nourriture ~aplatie
+      const floorTarget = foodBottomY + foodExt * sink;
+      const plateY = num('py', floorTarget - (P.meshFloorY || 0) * sP);
+      plateEnt.setLocalPosition(0, plateY, 0);
+    } catch (e) { console.warn('Assiette GLB indisponible', e); }
+  }
+
+  // ---------- 3bis. SOCLE CACHE-TROUS ----------
+  // Volume plat couleur assiette glissé SOUS le plat : invisible en temps
+  // normal, il apparaît à travers les zones sans gaussiennes → les trous se
+  // fondent dans l'assiette au lieu de laisser voir le fond bleu.
+  // Placé sous le POINT LE PLUS BAS mesuré du nuage : jamais collé au plat,
+  // jamais de perçage, même dans les assiettes creuses.
+  // Forme : cylindre par défaut, rectangle si dish.disc.shape === 'box'
+  // (dimensionné et orienté sur les axes mesurés du plat).
+  // Calibration : &discr= (rayon/demi-longueur, 0 = désactivé) &discy= (hauteur)
+  const discConf = (dish.plate ? { r: 0 } : dish.disc) || {};   // assiette mesh = pas de socle
+  const GAP = 75;   // marge sous le point le plus bas du nuage
+  const autoY = AUTO ? AUTO.dLow * SCALE_EFF - GAP : -60;
+  const DISC_Y = num('discy', discConf.y !== undefined ? discConf.y : autoY);
+  const DISC_H = discConf.h !== undefined ? discConf.h : 60;
+  const isBox = discConf.shape === 'box';
+  const autoR = AUTO ? AUTO.radius * SCALE_EFF * 0.84 : 1050;
+  const DISC_R = num('discr', discConf.r !== undefined ? discConf.r : autoR);
+  if (DISC_R > 0) {
+    const discMat = new pc.StandardMaterial();
+    discMat.diffuse.set(0, 0, 0);
+    discMat.emissive.fromString(discConf.color || '#f0ede6');
+    discMat.update();
+    const socle = new pc.Entity('socle');
+    socle.addComponent('render', { type: isBox ? 'box' : 'cylinder', material: discMat });
+    pivot.addChild(socle);
+    if (isBox && AUTO) {
+      // Rectangle aux mesures du plat, aligné sur son grand axe
+      const L = num('discl', AUTO.ext1 * SCALE_EFF * 0.86);
+      const W = num('discw', AUTO.ext2 * SCALE_EFF * 0.86);
+      socle.setLocalScale(L, DISC_H, W);
+      const a1 = new pc.Vec3(AUTO.axis1[0], AUTO.axis1[1], AUTO.axis1[2]);
+      const a1w = new pc.Vec3();
+      qFinal.transformVector(a1, a1w);          // grand axe dans le repère monde
+      const yawDeg = Math.atan2(-a1w.z, a1w.x) * 180 / Math.PI;
+      socle.setLocalEulerAngles(0, yawDeg, 0);
+    } else {
+      socle.setLocalScale(DISC_R * 2, DISC_H, DISC_R * 2);
+    }
+    socle.setLocalPosition(0, SPLAT_LIFT_Y + DISC_Y, 0);
+  }
 
   app.start();
   await new Promise((r) => requestAnimationFrame(r));
