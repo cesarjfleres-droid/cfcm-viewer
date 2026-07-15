@@ -298,7 +298,23 @@
 
     // ---- Mode SPLAT SEUL (le .ply contient déjà l'assiette) ----
     tacos:   { name: 'Tacos Saumon', price: '20 €', ply: R2 + '/tacos.ply' },
-    saumon:  { name: 'Saumon',       price: '26 €', ply: R2 + '/tartare-2.ply' },
+    saumon: {
+      name: 'Tartare',
+      price: '26 €',
+      ply: R2 + '/Tartare.ply',
+      euler: [0, 0, 0],                 // à calibrer au curseur (&edit=1)
+      plate: {
+        glb: R2 + '/liana.glb',
+        floorRatio: -0.0314,            // fond intérieur du bol ÷ diamètre (mesuré)
+        foodRatio: 0.40,
+        depth: 0.045,
+        sink: 0.02,
+        dx: 0, dz: 0, zoom: 1.35,
+        pscale: 1, pdx: 0, pdz: 0, pyoff: 0,
+        zoomMax: 1.7,
+        color: [0.97, 0.96, 0.95],
+      },
+    },
     pasta: {
       name: 'Spaghetto alla chitarra',
       price: '38 €',
@@ -314,7 +330,23 @@
         color: [0.97, 0.96, 0.95],
       },
     },
-    dessert: { name: 'Cannolo Sicilien',        price: '15 €', ply: R2 + '/canolo.ply' },
+    dessert: {
+      name: 'Cannolo Sicilien',
+      price: '15 €',
+      ply: R2 + '/canolo-2.ply',
+      euler: [0, 0, 0],                 // à calibrer au curseur (&edit=1)
+      plate: {
+        glb: R2 + '/cesar.glb',
+        floorRatio: -0.0878,            // fond intérieur du bol ÷ diamètre (mesuré)
+        foodRatio: 0.40,
+        depth: 0.045,
+        sink: 0.02,
+        dx: 0, dz: 0, zoom: 1.35,
+        pscale: 1, pdx: 0, pdz: 0, pyoff: 0,
+        zoomMax: 1.7,
+        color: [0.97, 0.96, 0.95],
+      },
+    },
   };
 
   /* ---------- Mise en scène (identique à Baia Bella) ---------- */
@@ -588,6 +620,13 @@
     dx:      num('dx', PL.dx || 0),      // décalage horizontal du dressage
     dz:      num('dz', PL.dz || 0),
     zoom:    num('zoom', PL.zoom || 1), // facteur de taille du dressage
+    // --- assiette, réglable indépendamment de la nourriture ---
+    pscale:  num('pscale', PL.pscale || 1),   // taille de l'assiette (× auto)
+    pdx:     num('pdx', PL.pdx || 0),          // décalage assiette ←→
+    pdz:     num('pdz', PL.pdz || 0),          // décalage assiette ↕
+    pyoff:   num('pyoff', PL.pyoff || 0),      // hauteur assiette (fin)
+    // --- limite de zoom côté client ---
+    zmax:    num('zmax', PL.zoomMax || 1.7),   // zoom AVANT max autorisé (client)
   };
 
   function applyPose() {
@@ -656,13 +695,13 @@
       const bb = mis[0].aabb.clone();
       for (let i = 1; i < mis.length; i++) bb.add(mis[i].aabb);
       const meshDia = Math.max(bb.halfExtents.x, bb.halfExtents.z) * 2;
-      const s = DIA_W / meshDia;
+      const s = (DIA_W / meshDia) * S.pscale;    // taille assiette (curseur)
       plate.setLocalScale(s, s, s);
       // Le fond intérieur du bol arrive juste sous le dressage
       const floorLocal = (PL.floorRatio !== undefined ? PL.floorRatio : -0.05) * meshDia;
       const GAP = DIA_W * 0.004;
-      const y = num('py', foodBottom - GAP + foodHeight * S.sink - floorLocal * s);
-      plate.setLocalPosition(0, y, 0);
+      const y = num('py', foodBottom - GAP + foodHeight * S.sink - floorLocal * s) + S.pyoff;
+      plate.setLocalPosition(S.pdx, y, S.pdz);   // décalage assiette (curseurs)
 
       const mat = new pc.StandardMaterial();
       mat.diffuse = new pc.Color(1, 1, 1);        // porcelaine blanc pur
@@ -723,9 +762,12 @@
   }
 
   function configText() {
-    return `euler: [${S.ex}, ${S.ey}, ${S.ez}]   autorot: ${S.autorot}   flip: ${S.flip}
-plate: { foodRatio: ${S.fr}, depth: ${S.pdepth}, sink: ${S.sink} }
-zoom: ${S.zoom}   dx: ${S.dx}   dz: ${S.dz}`;
+    return `euler: [${S.ex}, ${S.ey}, ${S.ez}],  autorot: ${S.autorot}, flip: ${S.flip},
+zoom: ${S.zoom}, dx: ${S.dx}, dz: ${S.dz}, sink: ${S.sink},
+zoomMax: ${S.zmax},
+plate: {
+  pscale: ${S.pscale}, pdx: ${S.pdx}, pdz: ${S.pdz}, pyoff: ${S.pyoff},
+}`;
   }
 
   /* ==========================================================
@@ -742,15 +784,18 @@ zoom: ${S.zoom}   dx: ${S.dx}   dz: ${S.dz}`;
     document.body.appendChild(panel);
 
     const rows = [
-      ['ex', 'Rotation X', -180, 180, 1],
-      ['ey', 'Rotation Y', -180, 180, 1],
-      ['ez', 'Rotation Z', -180, 180, 1],
-      ['zoom', 'Taille', 0.4, 2.5, 0.01],
-      ['dx', 'Décalage ←→', -800, 800, 5],
-      ['dz', 'Décalage ↑↓', -800, 800, 5],
-      ['sink', 'Enfoncement', -0.3, 0.6, 0.01],
-      ['fr', 'Assiette (petite→grande)', 0.15, 0.8, 0.01],
-      ['pdepth', 'Creux', 0, 0.25, 0.005],
+      ['ex', 'Nourriture · Rotation X', -180, 180, 1],
+      ['ey', 'Nourriture · Rotation Y', -180, 180, 1],
+      ['ez', 'Nourriture · Rotation Z', -180, 180, 1],
+      ['zoom', 'Nourriture · Taille', 0.4, 2.5, 0.01],
+      ['dx', 'Nourriture · Décalage ←→', -800, 800, 5],
+      ['dz', 'Nourriture · Décalage ↑↓', -800, 800, 5],
+      ['sink', 'Nourriture · Enfoncement', -0.3, 0.6, 0.01],
+      ['pscale', 'Assiette · Taille', 0.5, 2.5, 0.01],
+      ['pdx', 'Assiette · Décalage ←→', -800, 800, 5],
+      ['pdz', 'Assiette · Décalage ↑↓', -800, 800, 5],
+      ['pyoff', 'Assiette · Hauteur', -400, 400, 5],
+      ['zmax', 'Zoom client MAX', 1.0, 1.7, 0.05],
     ];
     rows.forEach(([k, label, min, max, step]) => {
       const row = document.createElement('label');
@@ -812,7 +857,9 @@ zoom: ${S.zoom}   dx: ${S.dx}   dz: ${S.dz}`;
   }
   place();
 
-  const clampZoom = (z) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
+  // Le zoom AVANT max est plafonné par plat (S.zmax) pour éviter que le client
+  // zoome trop près et voie les artefacts. ZOOM_MAX reste la borne absolue.
+  const clampZoom = (z) => Math.min(Math.min(ZOOM_MAX, S.zmax), Math.max(ZOOM_MIN, z));
   const pts = new Map();
   let pinch = 0;
   const hint = document.getElementById('hint');
