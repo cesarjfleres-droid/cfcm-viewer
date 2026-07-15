@@ -336,8 +336,8 @@
       ply: R2 + '/canolo-2.ply',
       euler: [0, 0, 0],                 // à calibrer au curseur (&edit=1)
       plate: {
-        glb: R2 + '/C%C3%A9sar.glb',   // 'César.glb' — é encodé pour l'URL R2
-        floorRatio: -0.0878,            // fond intérieur du bol ÷ diamètre (mesuré)
+        glb: R2 + '/Liana.glb',        // Liana (César.glb est un mesh cassé, inutilisable)
+        floorRatio: -0.0314,            // fond intérieur du bol Liana ÷ diamètre
         foodRatio: 0.40,
         depth: 0.045,
         sink: 0.02,
@@ -711,11 +711,9 @@
       mat.gloss = 0.60;
       mat.useMetalness = true;
       mat.metalness = 0;
-      mat.cull = pc.CULLFACE_BACK;      // n'afficher que la face avant : deux
-      // parois qui se chevauchent (mesh Blender non-manifold) ne se battent
-      // plus pixel par pixel → fin du moucheté / z-fighting
+      mat.cull = pc.CULLFACE_NONE;     // Liana : coque propre, double face OK
+      mat.twoSidedLighting = true;
       mat.depthWrite = true;
-      mat.depthTest = true;
       mat.update();
       mis.forEach((m) => { m.material = mat; });
 
