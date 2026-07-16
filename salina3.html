@@ -301,15 +301,15 @@
       name: 'Tacos Saumon',
       price: '20 €',
       ply: R2 + '/tacos.ply',
-      euler: [0, 0, 0],                 // à calibrer au curseur (&edit=1) — la normale auto est fausse ici
+      euler: [-171, -113, 0],           // pose validée au curseur
       plate: {
         glb: R2 + '/tacosplate.glb',    // assiette réparée (mesh continu, nom neuf → aucun cache)
-        floorRatio: 0,                  // plateau plat (pas un bol) → ~0, à affiner
+        floorRatio: 0,                  // plateau plat (pas un bol)
         foodRatio: 0.40,
         depth: 0.045,
-        sink: 0.02,
-        dx: 0, dz: 0, zoom: 1.35,
-        pscale: 1, pdx: 0, pdz: 0, pyoff: 0,
+        sink: -0.28,
+        dx: 120, dz: 0, zoom: 2.48,
+        pscale: 0.97, pdx: 0, pdz: 55, pyoff: 0,   // pyoff (Assiette·Hauteur) à confirmer
         zoomMax: 1.7,
         color: [0.97, 0.96, 0.95],
       },
