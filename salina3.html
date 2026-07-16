@@ -296,8 +296,24 @@
       },
     },
 
-    // ---- Mode SPLAT SEUL (le .ply contient déjà l'assiette) ----
-    tacos:   { name: 'Tacos Saumon', price: '20 €', ply: R2 + '/tacos.ply' },
+    // ---- Mode SPLAT + ASSIETTE 3D (calibration au curseur &edit=1) ----
+    tacos: {
+      name: 'Tacos Saumon',
+      price: '20 €',
+      ply: R2 + '/tacos.ply',
+      euler: [0, 0, 0],                 // à calibrer au curseur (&edit=1) — la normale auto est fausse ici
+      plate: {
+        glb: R2 + '/tacosplate.glb',    // assiette réparée (mesh continu, nom neuf → aucun cache)
+        floorRatio: 0,                  // plateau plat (pas un bol) → ~0, à affiner
+        foodRatio: 0.40,
+        depth: 0.045,
+        sink: 0.02,
+        dx: 0, dz: 0, zoom: 1.35,
+        pscale: 1, pdx: 0, pdz: 0, pyoff: 0,
+        zoomMax: 1.7,
+        color: [0.97, 0.96, 0.95],
+      },
+    },
     saumon: {
       name: 'Tartare',
       price: '26 €',
