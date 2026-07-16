@@ -777,10 +777,13 @@
     return { scale, foodWidth, foodHeight, foodBottom };
   }
 
+  // Valeurs caméra live (cadrage d'ouverture : angle + zoom), lues en mode édition.
+  const camLive = { yaw: 0, elev: ELEV_START, zoom: 1 };
   function configText() {
     return `euler: [${S.ex}, ${S.ey}, ${S.ez}],  autorot: ${S.autorot}, flip: ${S.flip},
 zoom: ${S.zoom}, dx: ${S.dx}, dz: ${S.dz}, sink: ${S.sink},
 zoomMax: ${S.zmax},
+camYaw: ${Math.round(camLive.yaw)}, camElev: ${Math.round(camLive.elev)}, camZoom: ${camLive.zoom.toFixed(2)},
 plate: {
   pscale: ${S.pscale}, pdx: ${S.pdx}, pdz: ${S.pdz}, pyoff: ${S.pyoff},
 }`;
@@ -857,9 +860,17 @@ plate: {
   /* ==========================================================
      8. Caméra orbitale
      ========================================================== */
+  // Cadrage d'ouverture par plat : angle (yaw/elev) + zoom. Surcharge URL : &cyaw= &celev= &czoom=
+  const CAM0 = {
+    yaw:  num('cyaw',  dish.camYaw  != null ? dish.camYaw  : 0),
+    elev: num('celev', dish.camElev != null ? dish.camElev : ELEV_START),
+    zoom: num('czoom', dish.camZoom != null ? dish.camZoom : 1),
+  };
+  CAM0.elev = Math.min(ELEV_MAX, Math.max(ELEV_MIN, CAM0.elev));
+  CAM0.zoom = Math.min(Math.min(ZOOM_MAX, S.zmax), Math.max(ZOOM_MIN, CAM0.zoom));
   const cam = {
-    yaw: 0, elev: ELEV_START, zoom: 1,
-    tYaw: 0, tElev: ELEV_START, tZoom: 1, vYaw: 0,
+    yaw: CAM0.yaw, elev: CAM0.elev, zoom: CAM0.zoom,
+    tYaw: CAM0.yaw, tElev: CAM0.elev, tZoom: CAM0.zoom, vYaw: 0,
   };
   function place() {
     const d = CAM_DIST * cam.zoom;
@@ -918,6 +929,8 @@ plate: {
     cam.elev += (cam.tElev - cam.elev) * SMOOTH;
     cam.zoom += (cam.tZoom - cam.zoom) * SMOOTH;
     place();
+    camLive.yaw = cam.yaw; camLive.elev = cam.elev; camLive.zoom = cam.zoom;
+    if (info) info.textContent = configText();   // encadré vert live (angle + zoom)
   });
 
   /* ==========================================================
@@ -965,7 +978,7 @@ plate: {
   });
 
   btnReset.addEventListener('click', () => {
-    cam.tYaw = 0; cam.tElev = ELEV_START; cam.tZoom = 1; cam.vYaw = 0;
+    cam.tYaw = CAM0.yaw; cam.tElev = CAM0.elev; cam.tZoom = CAM0.zoom; cam.vYaw = 0;
   });
 
   btnShot.addEventListener('click', () => {
