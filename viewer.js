@@ -22,6 +22,9 @@
  *   &looky=1400  + ex/ey/ez, fx/fy/fz, scale, camz, lift
  * ============================================================ */
 (async function main() {
+  // Marque affichée : surchargée via window.VIEWER_BRAND (défaut : Baia Bella).
+  const VIEWER_BRAND = (typeof window !== 'undefined' && window.VIEWER_BRAND !== undefined) ? window.VIEWER_BRAND : 'Baia Bella';
+  const BRAND_SLUG = VIEWER_BRAND ? VIEWER_BRAND.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') : 'cfcm';
   const $ = (id) => document.getElementById(id);
   const loader = $('loader');
   const loaderFill = $('loader-fill');
@@ -163,7 +166,7 @@
   $('dish-name').textContent = dish.name;
   $('dish-price').textContent = dish.price;
   loaderDish.textContent = dish.name;
-  document.title = `Baia Bella · ${dish.name} en 3D`;
+  document.title = VIEWER_BRAND ? `${VIEWER_BRAND} \u00B7 ${dish.name} en 3D` : `${dish.name} \u00B7 D\u00e9gustation 3D`;
 
   // ---------- 1. PLAYCANVAS APP ----------
   if (typeof pc === 'undefined') {
@@ -652,7 +655,7 @@
 
     out.toBlob((blob) => {
       if (!blob) return;
-      const file = new File([blob], `baia-bella-${dishKey}-${Date.now()}.jpg`, { type: 'image/jpeg' });
+      const file = new File([blob], `${BRAND_SLUG}-${dishKey}-${Date.now()}.jpg`, { type: 'image/jpeg' });
 
       // Mobile : feuille de partage native (enregistrer dans Photos,
       // envoyer, publier). Sinon : téléchargement automatique.
@@ -668,7 +671,7 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `baia-bella-${dishKey}-${Date.now()}.jpg`;
+    a.download = `${BRAND_SLUG}-${dishKey}-${Date.now()}.jpg`;
     document.body.appendChild(a);
     a.click();
     a.remove();
